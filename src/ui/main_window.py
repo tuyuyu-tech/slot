@@ -867,18 +867,22 @@ class MainWindow(QMainWindow):
         """MainWindowクラスの初期化。"""
         super().__init__()
         
-        # モジュールの初期化
-        self.screen_capture = ScreenCapture()
-        self.video_processor = VideoProcessor()
+        # モジュールの初期化（最適化バージョン）
+        self.screen_capture = ScreenCapture(
+            use_threading=True,      # バックグラウンドスレッドでキャプチャ
+            queue_size=3,            # キャプチャキューサイズ
+            downsample=False         # 必要に応じてダウンサンプリングを有効化
+        )
+        self.video_processor = VideoProcessor(detection_interval=5.0)  # リール検出間隔を延長
         
         # 機種データベースの初期化
         self.machine_database = MachineDatabase()
         
-        # 図柄認識器を初期化（ハイブリッド認識器を使用）
+        # 図柄認識器を初期化（ハイブリッド認識器を使用、最適化パラメータ）
         try:
-            self.symbol_recognizer = HybridSymbolRecognizer()
+            self.symbol_recognizer = HybridSymbolRecognizer(ml_interval=15)  # 15フレームに1回だけML認識を実行
             self.using_hybrid_recognizer = True
-            logging.info("ハイブリッド図柄認識器を初期化しました")
+            logging.info("ハイブリッド図柄認識器を初期化しました（最適化モード）")
         except Exception as e:
             # エラー時はTemplateMatchingを使用
             self.symbol_recognizer = TemplateMatching()
@@ -887,6 +891,23 @@ class MainWindow(QMainWindow):
         
         self.symbol_tracker = SymbolTracker()
         self.timing_manager = TimingManager()
+        
+        # フレーム処理用の変数
+        self.frame_count = 0
+        self.last_fps_update_time = time.time()
+        self.fps_history = []
+        self.fps_update_interval = 1.0  # FPS表示の更新間隔（秒）
+        self.last_ui_update_time = 0
+        self.ui_update_interval = 0.05  # UI更新の最小間隔（秒）
+        
+        # 処理頻度の設定
+        self.recognition_interval = 2    # 図柄認識を行う間隔（フレーム数）
+        self.timing_interval = 1        # タイミング計算を行う間隔（フレーム数）
+        self.machine_detection_interval = 150  # 自動機種判別を行う間隔（フレーム数）
+        
+        # 最適化用の変数
+        self.last_tracking_result = []   # 最後の追跡結果をキャッシュ
+        self.last_timing_result = {}     # 最後のタイミング結果をキャッシュ
         
         # フレーム処理タイマー
         self.timer = QTimer(self)
@@ -901,6 +922,10 @@ class MainWindow(QMainWindow):
         # 自動機種判別フラグ
         self.auto_detect_machine = False
         self.last_detection_time = 0
+        
+        # パフォーマンス最適化用の設定
+        self.ui_refresh_rate = 30  # UIの最大更新レート（フレーム/秒）
+        self.processing_time_history = []  # 処理時間の履歴
         
         # 初期設定
         self.initUI()
@@ -1040,80 +1065,151 @@ class MainWindow(QMainWindow):
             self.start_stop_button.setText("キャプチャ開始")
             self.statusBar().showMessage("キャプチャ停止")
         else:
-            # キャプチャ開始
-            self.timer.start(33)  # 約30fpsでフレーム処理
+            # スレッド設定の確認
+            if not self.screen_capture.use_threading:
+                logging.info("キャプチャスレッド処理が無効です。パフォーマンスを向上させるには有効にしてください。")
+            
+            # キャプチャ開始（タイマー間隔の最適化）
+            # 目標FPSに基づいてタイマー間隔を設定（ここでは33msで約30fps）
+            target_fps = min(60, max(20, int(1000 / 33)))  # 20〜60FPSの範囲で設定
+            timer_interval = max(16, int(1000 / target_fps))  # 16ms〜（最大60FPS）
+            
+            # 現在の設定をログに出力
+            logging.info(f"キャプチャ開始 - 設定: タイマー間隔={timer_interval}ms (目標{target_fps}FPS), "
+                        f"認識間隔={self.recognition_interval}フレーム, "
+                        f"タイミング間隔={self.timing_interval}フレーム, "
+                        f"UI更新間隔={self.ui_update_interval*1000:.1f}ms")
+            
+            # キャプチャタイマーを開始
+            self.timer.start(timer_interval)
             self.capturing = True
             self.start_stop_button.setText("キャプチャ停止")
             self.statusBar().showMessage("キャプチャ中")
+            
+            # カウンターとタイミングをリセット
+            self.frame_count = 0
+            self.last_fps_update_time = time.time()
+            self.last_ui_update_time = 0
+            self.fps_history = []
     
     def process_frame(self):
         """
         フレームを処理する。
-        キャプチャ、認識、タイミング計算の一連の処理を行う。
+        パフォーマンス最適化のため処理頻度を調整し、一部の重い処理を間引いて実行する。
         """
         if self.processing:
             return
         
+        processing_start_time = time.time()
         self.processing = True
+        self.frame_count += 1
         
         try:
-            # フレームをキャプチャ
+            # フレームをキャプチャ（スレッド処理で高速化）
             frame, fps = self.screen_capture.capture_frame()
             
-            # 現在の元のフレームを保存
-            original_frame = frame.copy()
+            # FPS計測を更新
+            current_time = time.time()
+            self.fps_history.append(fps)
             
-            # リール領域を抽出
-            reel_frame = self.video_processor.extract_reel_area(frame)
+            # avg_fpsを初期化（エラー防止）
+            avg_fps = 0
             
-            # リール領域が検出された場合、認識処理を実行
-            # ただし、前回のフレームを参照して急激な変化を防止する
-            if reel_frame is not None:
-                processed_frame = reel_frame
-                # リール領域が検出されたときのステータス更新
-                if hasattr(self, 'using_original_frame') and self.using_original_frame:
-                    self.using_original_frame = False
-                    self.statusBar().showMessage(f"リール領域を検出しました - FPS: {fps:.1f}")
-            else:
-                # リール領域が検出されない場合は元のフレームを使用
-                processed_frame = original_frame
-                # 初めて検出に失敗した場合のみメッセージ表示
-                if not hasattr(self, 'using_original_frame') or not self.using_original_frame:
-                    self.using_original_frame = True
-                    self.statusBar().showMessage(f"リール領域検出に失敗しました。元のフレームを使用します - FPS: {fps:.1f}")
-            
-            # フレームを表示
-            self.video_frame.update_frame(processed_frame)
-            self.symbol_registration.update_frame(processed_frame)
-            
-            # 図柄認識
-            recognized_symbols = self.symbol_recognizer.recognize_symbols(processed_frame)
-            
-            # 図柄追跡
-            tracked_symbols = self.symbol_tracker.update(recognized_symbols, processed_frame)
-            
-            # トラッキング結果を表示
-            self.video_frame.update_symbols(tracked_symbols)
-            
-            # リール番号ごとに図柄をグループ化
-            # 簡易的な実装として、画面を3等分して各領域をリールとみなす
-            reel_symbols = {}
-            width = processed_frame.shape[1]
-            
-            for symbol in tracked_symbols:
-                x = symbol['x']
-                # 画面位置からリール番号を推定
-                reel_id = min(3, max(1, int(x * 3 / width) + 1))
+            # 1秒ごとに平均FPSを計算して表示
+            if current_time - self.last_fps_update_time > self.fps_update_interval:
+                avg_fps = sum(self.fps_history) / len(self.fps_history) if self.fps_history else 0
+                self.fps_history = []
+                self.last_fps_update_time = current_time
                 
-                if reel_id not in reel_symbols:
-                    reel_symbols[reel_id] = []
+                # 認識器の種類を表示用に取得
+                recognizer_type = "ハイブリッド認識" if getattr(self, 'using_hybrid_recognizer', False) else "テンプレートマッチング"
                 
-                reel_symbols[reel_id].append(symbol)
+                # ステータスバー更新（FPS情報）
+                tracked_count = len(self.last_tracking_result) if self.last_tracking_result else 0
+                self.statusBar().showMessage(
+                    f"キャプチャ中 - FPS: {avg_fps:.1f} - 認識図柄: {tracked_count} - 認識方式: {recognizer_type}")
             
-            # 自動機種判別
-            if self.auto_detect_machine and time.time() - self.last_detection_time > 5:  # 5秒ごとに判別
-                self.last_detection_time = time.time()
-                detected_machine = self.machine_database.detect_machine(processed_frame)
+            # リール領域を抽出（間引いて実行）
+            if self.frame_count % 2 == 0 or not hasattr(self, 'processed_frame'):
+                reel_frame = self.video_processor.extract_reel_area(frame)
+                
+                # リール領域が検出された場合
+                if reel_frame is not None:
+                    self.processed_frame = reel_frame
+                    # リール領域が検出されたときのステータス更新
+                    if hasattr(self, 'using_original_frame') and self.using_original_frame:
+                        self.using_original_frame = False
+                else:
+                    # リール領域が検出されない場合は元のフレームを使用
+                    self.processed_frame = frame.copy()
+                    # 初めて検出に失敗した場合のみメッセージ表示
+                    if not hasattr(self, 'using_original_frame') or not self.using_original_frame:
+                        self.using_original_frame = True
+            
+            # UIアップデートの間引き（最小間隔を設定）
+            # UIの更新はフレームごとに行うと重いため、一定間隔でのみ更新
+            should_update_ui = (current_time - self.last_ui_update_time > self.ui_update_interval)
+            
+            if should_update_ui:
+                # フレームを表示
+                self.video_frame.update_frame(self.processed_frame)
+                
+                # 図柄登録画面も更新（必要な場合のみ）
+                if self.symbol_registration.isVisible():
+                    self.symbol_registration.update_frame(self.processed_frame)
+                
+                self.last_ui_update_time = current_time
+            
+            # 図柄認識と追跡（間引いて実行）
+            run_recognition = (self.frame_count % self.recognition_interval == 0)
+            
+            if run_recognition:
+                # 図柄認識
+                recognized_symbols = self.symbol_recognizer.recognize_symbols(self.processed_frame)
+                
+                # 図柄追跡
+                self.last_tracking_result = self.symbol_tracker.update(recognized_symbols, self.processed_frame)
+                
+                # UIの更新が必要な場合のみ表示を更新
+                if should_update_ui:
+                    self.video_frame.update_symbols(self.last_tracking_result)
+                
+                # リール番号ごとに図柄をグループ化（画面を3等分）
+                reel_symbols = {}
+                if self.processed_frame is not None:
+                    width = self.processed_frame.shape[1]
+                    
+                    for symbol in self.last_tracking_result:
+                        x = symbol['x']
+                        # 画面位置からリール番号を推定
+                        reel_id = min(3, max(1, int(x * 3 / width) + 1))
+                        
+                        if reel_id not in reel_symbols:
+                            reel_symbols[reel_id] = []
+                        
+                        reel_symbols[reel_id].append(symbol)
+                
+                # タイミング計算（間引いて実行）
+                if self.frame_count % self.timing_interval == 0:
+                    self.last_timing_result = self.timing_manager.update(reel_symbols)
+                    
+                    # UIの更新が必要な場合のみ表示を更新
+                    if should_update_ui:
+                        self.video_frame.update_timing(self.last_timing_result)
+            
+            # UIの更新が必要な場合、前回の結果を使って表示を更新
+            elif should_update_ui:
+                # 前回の追跡結果とタイミング結果があれば表示
+                if hasattr(self, 'last_tracking_result') and self.last_tracking_result:
+                    self.video_frame.update_symbols(self.last_tracking_result)
+                
+                if hasattr(self, 'last_timing_result') and self.last_timing_result:
+                    self.video_frame.update_timing(self.last_timing_result)
+            
+            # 自動機種判別（間引いてフレーム数ベースで実行）
+            if self.auto_detect_machine and self.frame_count % self.machine_detection_interval == 0:
+                self.last_detection_time = current_time
+                detected_machine = self.machine_database.detect_machine(self.processed_frame)
                 
                 if detected_machine != "default" and detected_machine != self.machine_database.current_machine:
                     # 機種が変更された場合、タイミング予測器に新しい機種を設定
@@ -1135,24 +1231,40 @@ class MainWindow(QMainWindow):
                         )
                         self.timing_manager.timing_predictor.set_current_machine(detected_machine)
             
-            # タイミング計算
-            timing_results = self.timing_manager.update(reel_symbols)
+            # 図柄名リストを更新（頻繁に変わらないので間引く）
+            if self.frame_count % 30 == 0:  # 30フレームごとに更新
+                symbol_names = list(self.symbol_recognizer.symbols.keys())
+                self.timing_settings.update_symbol_names(symbol_names)
             
-            # タイミング結果を表示
-            self.video_frame.update_timing(timing_results)
+            # パフォーマンス計測
+            processing_time = time.time() - processing_start_time
+            self.processing_time_history.append(processing_time)
             
-            # 認識器の種類を表示用に取得
-            recognizer_type = "ハイブリッド認識" if getattr(self, 'using_hybrid_recognizer', False) else "テンプレートマッチング"
-            
-            # ステータスバー更新
-            self.statusBar().showMessage(f"キャプチャ中 - FPS: {fps:.1f} - 認識図柄: {len(tracked_symbols)} - 認識方式: {recognizer_type}")
-            
-            # 図柄名リストを更新
-            symbol_names = list(self.symbol_recognizer.symbols.keys())
-            self.timing_settings.update_symbol_names(symbol_names)
+            # 処理時間が長すぎる場合は次回の認識間隔を調整（自動チューニング）
+            if len(self.processing_time_history) > 30:
+                avg_processing_time = sum(self.processing_time_history) / len(self.processing_time_history)
+                
+                # 処理時間が1フレーム時間の80%を超える場合は間隔を長くする
+                frame_time = 1.0 / 30.0  # 目標: 30FPS
+                if avg_processing_time > frame_time * 0.8:
+                    self.recognition_interval = min(5, self.recognition_interval + 1)  # 最大5フレームまで
+                # 処理に余裕がある場合は間隔を短くする
+                elif avg_processing_time < frame_time * 0.5 and self.recognition_interval > 1:
+                    self.recognition_interval = max(1, self.recognition_interval - 1)
+                
+                # 履歴をリセット
+                if len(self.processing_time_history) > 60:
+                    self.processing_time_history = self.processing_time_history[-30:]
+                
+                # 処理状況をログに出力（60フレームごと）
+                if self.frame_count % 60 == 0:
+                    logging.debug(f"処理パフォーマンス: 平均処理時間={avg_processing_time*1000:.1f}ms, "
+                                 f"認識間隔={self.recognition_interval}フレーム, "
+                                 f"平均FPS={avg_fps:.1f}")
         
         except Exception as e:
             self.statusBar().showMessage(f"エラー: {str(e)}")
+            logging.error(f"フレーム処理エラー: {str(e)}", exc_info=True)
         
         finally:
             self.processing = False

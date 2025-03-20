@@ -918,3 +918,212 @@
 2025-03-21 02:38:41,271 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
 2025-03-21 02:38:41,271 - root - INFO - テンプレート「7」をUIに読み込みました
 2025-03-21 02:38:41,272 - root - INFO - テンプレート「7」を表示しました
+2025-03-21 03:18:30,808 - root - INFO - アプリケーション起動
+2025-03-21 03:18:31,441 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 03:18:31,441 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 03:18:31,447 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 03:18:31,447 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 03:18:31,448 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 03:18:31,448 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 03:18:31,449 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 03:18:31,449 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 03:18:31,449 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 03:18:31,577 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 03:18:31,577 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 03:18:31,578 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 03:18:31,578 - root - ERROR - 機種「」は存在しません
+2025-03-21 03:18:31,578 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 03:18:31,578 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 03:18:31,578 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 03:18:31,578 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 03:18:31,579 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 03:18:31,579 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 03:18:31,579 - root - INFO - テンプレート「7」をUIに読み込みました
+2025-03-21 03:18:31,580 - root - INFO - テンプレート「7」を表示しました
+2025-03-21 03:19:30,105 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを保存しました
+2025-03-21 03:19:30,105 - root - INFO - テンプレートを保存しました
+2025-03-21 03:19:30,106 - root - INFO - 設定を保存しました
+2025-03-21 03:19:30,106 - root - INFO - アプリケーション終了
+2025-03-21 03:42:14,556 - root - INFO - アプリケーション起動
+2025-03-21 03:42:15,176 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 03:42:15,176 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 03:42:15,182 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 03:42:15,182 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 03:42:15,183 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 03:42:15,183 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 03:42:15,184 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 03:42:15,184 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 03:42:15,184 - root - INFO - ハイブリッド図柄認識器を初期化しました（最適化モード）
+2025-03-21 03:42:15,317 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 03:42:15,317 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 03:42:15,317 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 03:42:15,317 - root - ERROR - 機種「」は存在しません
+2025-03-21 03:42:15,317 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 03:42:15,318 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 03:42:15,318 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 03:42:15,318 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 03:42:15,318 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 03:42:15,318 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 03:42:15,319 - root - INFO - テンプレート「7」をUIに読み込みました
+2025-03-21 03:42:15,319 - root - INFO - テンプレート「7」を表示しました
+2025-03-21 03:42:24,220 - root - INFO - キャプチャ開始 - 設定: タイマー間隔=33ms (目標30FPS), 認識間隔=2フレーム, タイミング間隔=1フレーム, UI更新間隔=50.0ms
+2025-03-21 03:42:27,034 - root - ERROR - フレーム処理エラー: cannot access local variable 'avg_fps' where it is not associated with a value
+Traceback (most recent call last):
+  File "c:\git\claude-filesystem\slot\src\ui\main_window.py", line 1260, in process_frame
+    f"平均FPS={avg_fps:.1f}")
+               ^^^^^^^
+UnboundLocalError: cannot access local variable 'avg_fps' where it is not associated with a value
+2025-03-21 03:42:29,844 - root - ERROR - フレーム処理エラー: cannot access local variable 'avg_fps' where it is not associated with a value
+Traceback (most recent call last):
+  File "c:\git\claude-filesystem\slot\src\ui\main_window.py", line 1260, in process_frame
+    f"平均FPS={avg_fps:.1f}")
+               ^^^^^^^
+UnboundLocalError: cannot access local variable 'avg_fps' where it is not associated with a value
+2025-03-21 03:42:37,678 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを保存しました
+2025-03-21 03:42:37,678 - root - INFO - テンプレートを保存しました
+2025-03-21 03:42:37,679 - root - INFO - 設定を保存しました
+2025-03-21 03:42:37,679 - root - INFO - アプリケーション終了
+2025-03-21 03:47:24,770 - root - INFO - アプリケーション起動
+2025-03-21 03:47:25,360 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 03:47:25,360 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 03:47:25,366 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 03:47:25,366 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 03:47:25,366 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 03:47:25,367 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 03:47:25,367 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 03:47:25,367 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 03:47:25,367 - root - INFO - ハイブリッド図柄認識器を初期化しました（最適化モード）
+2025-03-21 03:47:25,675 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 03:47:25,675 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 03:47:25,675 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 03:47:25,675 - root - ERROR - 機種「」は存在しません
+2025-03-21 03:47:25,675 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 03:47:25,675 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 03:47:25,676 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 03:47:25,676 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 03:47:25,676 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 03:47:25,676 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 03:47:25,677 - root - INFO - テンプレート「7」をUIに読み込みました
+2025-03-21 03:47:25,677 - root - INFO - テンプレート「7」を表示しました
+2025-03-21 03:47:35,021 - root - INFO - キャプチャ開始 - 設定: タイマー間隔=33ms (目標30FPS), 認識間隔=2フレーム, タイミング間隔=1フレーム, UI更新間隔=50.0ms
+2025-03-21 03:47:37,845 - root - ERROR - フレーム処理エラー: cannot access local variable 'avg_fps' where it is not associated with a value
+Traceback (most recent call last):
+  File "c:\git\claude-filesystem\slot\src\ui\main_window.py", line 1260, in process_frame
+    f"平均FPS={avg_fps:.1f}")
+               ^^^^^^^
+UnboundLocalError: cannot access local variable 'avg_fps' where it is not associated with a value
+2025-03-21 03:47:40,666 - root - ERROR - フレーム処理エラー: cannot access local variable 'avg_fps' where it is not associated with a value
+Traceback (most recent call last):
+  File "c:\git\claude-filesystem\slot\src\ui\main_window.py", line 1260, in process_frame
+    f"平均FPS={avg_fps:.1f}")
+               ^^^^^^^
+UnboundLocalError: cannot access local variable 'avg_fps' where it is not associated with a value
+2025-03-21 03:47:42,387 - root - INFO - キャプチャ開始 - 設定: タイマー間隔=33ms (目標30FPS), 認識間隔=1フレーム, タイミング間隔=1フレーム, UI更新間隔=50.0ms
+2025-03-21 03:47:45,202 - root - ERROR - フレーム処理エラー: cannot access local variable 'avg_fps' where it is not associated with a value
+Traceback (most recent call last):
+  File "c:\git\claude-filesystem\slot\src\ui\main_window.py", line 1260, in process_frame
+    f"平均FPS={avg_fps:.1f}")
+               ^^^^^^^
+UnboundLocalError: cannot access local variable 'avg_fps' where it is not associated with a value
+2025-03-21 03:47:48,039 - root - ERROR - フレーム処理エラー: cannot access local variable 'avg_fps' where it is not associated with a value
+Traceback (most recent call last):
+  File "c:\git\claude-filesystem\slot\src\ui\main_window.py", line 1260, in process_frame
+    f"平均FPS={avg_fps:.1f}")
+               ^^^^^^^
+UnboundLocalError: cannot access local variable 'avg_fps' where it is not associated with a value
+2025-03-21 03:47:48,045 - src.recognition.symbol_recognizer - INFO - 追跡中の図柄情報をリセットしました
+2025-03-21 03:47:48,045 - src.timing.reel_analyzer - INFO - フレームカウンターをリセットしました
+2025-03-21 03:47:48,045 - src.timing.reel_analyzer - INFO - タイミングデータをリセットしました
+2025-03-21 03:47:50,843 - root - ERROR - フレーム処理エラー: cannot access local variable 'avg_fps' where it is not associated with a value
+Traceback (most recent call last):
+  File "c:\git\claude-filesystem\slot\src\ui\main_window.py", line 1260, in process_frame
+    f"平均FPS={avg_fps:.1f}")
+               ^^^^^^^
+UnboundLocalError: cannot access local variable 'avg_fps' where it is not associated with a value
+2025-03-21 03:47:51,883 - root - INFO - キャプチャ開始 - 設定: タイマー間隔=33ms (目標30FPS), 認識間隔=1フレーム, タイミング間隔=1フレーム, UI更新間隔=50.0ms
+2025-03-21 03:47:54,731 - root - ERROR - フレーム処理エラー: cannot access local variable 'avg_fps' where it is not associated with a value
+Traceback (most recent call last):
+  File "c:\git\claude-filesystem\slot\src\ui\main_window.py", line 1260, in process_frame
+    f"平均FPS={avg_fps:.1f}")
+               ^^^^^^^
+UnboundLocalError: cannot access local variable 'avg_fps' where it is not associated with a value
+2025-03-21 03:47:57,552 - root - ERROR - フレーム処理エラー: cannot access local variable 'avg_fps' where it is not associated with a value
+Traceback (most recent call last):
+  File "c:\git\claude-filesystem\slot\src\ui\main_window.py", line 1260, in process_frame
+    f"平均FPS={avg_fps:.1f}")
+               ^^^^^^^
+UnboundLocalError: cannot access local variable 'avg_fps' where it is not associated with a value
+2025-03-21 03:47:59,658 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを保存しました
+2025-03-21 03:47:59,659 - root - INFO - テンプレートを保存しました
+2025-03-21 03:47:59,659 - root - INFO - 設定を保存しました
+2025-03-21 03:47:59,660 - root - INFO - アプリケーション終了
+2025-03-21 03:53:33,658 - root - INFO - アプリケーション起動
+2025-03-21 03:53:34,245 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 03:53:34,245 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 03:53:34,252 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 03:53:34,252 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 03:53:34,252 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 03:53:34,253 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 03:53:34,253 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 03:53:34,253 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 03:53:34,253 - root - INFO - ハイブリッド図柄認識器を初期化しました（最適化モード）
+2025-03-21 03:53:34,386 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 03:53:34,386 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 03:53:34,387 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 03:53:34,387 - root - ERROR - 機種「」は存在しません
+2025-03-21 03:53:34,387 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 03:53:34,387 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 03:53:34,387 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 03:53:34,387 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 03:53:34,387 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 03:53:34,387 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 03:53:34,388 - root - INFO - テンプレート「7」をUIに読み込みました
+2025-03-21 03:53:34,388 - root - INFO - テンプレート「7」を表示しました
+2025-03-21 03:53:37,373 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを保存しました
+2025-03-21 03:53:37,374 - root - INFO - テンプレートを保存しました
+2025-03-21 03:53:37,374 - root - INFO - 設定を保存しました
+2025-03-21 03:53:37,375 - root - INFO - アプリケーション終了
+2025-03-21 04:01:05,106 - root - INFO - アプリケーション起動
+2025-03-21 04:01:05,699 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 04:01:05,699 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 04:01:05,706 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 04:01:05,706 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 04:01:05,706 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 04:01:05,707 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 04:01:05,707 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 04:01:05,708 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 04:01:05,708 - root - INFO - ハイブリッド図柄認識器を初期化しました（最適化モード）
+2025-03-21 04:01:05,841 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 04:01:05,841 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 04:01:05,841 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 04:01:05,842 - root - ERROR - 機種「」は存在しません
+2025-03-21 04:01:05,842 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 04:01:05,842 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 04:01:05,842 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 04:01:05,842 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 04:01:05,843 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 04:01:05,843 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 04:01:05,843 - root - INFO - テンプレート「7」をUIに読み込みました
+2025-03-21 04:01:05,843 - root - INFO - テンプレート「7」を表示しました
+2025-03-21 04:01:18,762 - root - INFO - キャプチャ開始 - 設定: タイマー間隔=33ms (目標30FPS), 認識間隔=2フレーム, タイミング間隔=1フレーム, UI更新間隔=50.0ms
+2025-03-21 04:01:50,002 - src.capture.auto_calibration - INFO - 自動キャリブレーションを開始します
+2025-03-21 04:01:53,057 - src.capture.auto_calibration - WARNING - リール領域の検出に失敗しました
+2025-03-21 04:01:53,058 - src.capture.auto_calibration - INFO - キャリブレーションが完了しました: 0.00
+2025-03-21 04:01:55,278 - root - INFO - キャプチャ開始 - 設定: タイマー間隔=33ms (目標30FPS), 認識間隔=1フレーム, タイミング間隔=1フレーム, UI更新間隔=50.0ms
+2025-03-21 04:02:05,333 - src.capture.auto_calibration - INFO - 自動キャリブレーションを開始します
+2025-03-21 04:02:08,444 - src.capture.auto_calibration - WARNING - リール領域の検出に失敗しました
+2025-03-21 04:02:08,444 - src.capture.auto_calibration - INFO - キャリブレーションが完了しました: 0.00
+2025-03-21 04:02:10,085 - root - INFO - キャプチャ開始 - 設定: タイマー間隔=33ms (目標30FPS), 認識間隔=1フレーム, タイミング間隔=1フレーム, UI更新間隔=50.0ms
+2025-03-21 04:03:24,450 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを保存しました
+2025-03-21 04:03:24,451 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを登録しました: 7
+2025-03-21 04:03:24,451 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを保存しました
+2025-03-21 04:03:24,452 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを登録しました: 7
+2025-03-21 04:03:24,452 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを保存しました
+2025-03-21 04:03:24,452 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを登録しました: 7
+2025-03-21 04:03:24,453 - src.recognition.ml_symbol_recognizer - INFO - 学習データの準備を開始
+2025-03-21 04:03:24,456 - src.recognition.ml_symbol_recognizer - INFO - モデルの学習を開始
+2025-03-21 04:03:24,457 - src.recognition.ml_symbol_recognizer - ERROR - モデル学習中にエラーが発生しました: The number of classes has to be greater than one; got 1 class
+2025-03-21 04:04:03,338 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを保存しました
+2025-03-21 04:04:03,338 - root - INFO - テンプレートを保存しました
+2025-03-21 04:04:03,339 - root - INFO - 設定を保存しました
+2025-03-21 04:04:03,339 - root - INFO - アプリケーション終了

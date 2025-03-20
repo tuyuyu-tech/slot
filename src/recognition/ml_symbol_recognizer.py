@@ -394,25 +394,36 @@ class MLSymbolRecognizer(SymbolRecognizer):
             return []
 
 
+import time
+
 class HybridSymbolRecognizer(SymbolRecognizer):
     """
     テンプレートマッチングと機械学習を組み合わせたハイブリッド図柄認識クラス。
     両方の手法の利点を活かし、より高精度な認識を実現する。
+    パフォーマンス最適化のため、認識処理の頻度制御と効率化を追加。
     
     Attributes:
         template_matcher (TemplateMatching): テンプレートマッチング認識器
         ml_recognizer (MLSymbolRecognizer): 機械学習認識器
         use_ml (bool): 機械学習認識器を使用するかどうか
+        ml_interval (int): 機械学習認識を行う間隔（フレーム数）
+        frame_counter (int): 処理したフレームのカウンター
+        last_ml_time (float): 最後に機械学習認識を実行した時間
+        ml_results_cache (List): 機械学習の結果キャッシュ
+        last_frame_shape (Tuple): 最後に処理したフレームのサイズ
+        _performance_stats (Dict): パフォーマンス統計情報
     """
     
     def __init__(self, templates_dir: str = '../data/templates',
-                 models_dir: str = '../data/models'):
+                 models_dir: str = '../data/models',
+                 ml_interval: int = 15):
         """
         HybridSymbolRecognizerクラスの初期化。
         
         Args:
             templates_dir (str, optional): テンプレート画像のディレクトリパス。
             models_dir (str, optional): 学習済みモデルのディレクトリパス。
+            ml_interval (int, optional): 機械学習認識を行う間隔（フレーム数）。デフォルトは15。
         """
         super().__init__(templates_dir)
         
@@ -425,10 +436,26 @@ class HybridSymbolRecognizer(SymbolRecognizer):
         
         # 機械学習認識器が使用可能かどうか
         self.use_ml = self.ml_recognizer.model is not None
+        
+        # パフォーマンス最適化用パラメータ
+        self.ml_interval = ml_interval  # 機械学習認識を行う間隔（フレーム数）
+        self.frame_counter = 0
+        self.last_ml_time = 0
+        self.ml_results_cache = []
+        self.last_frame_shape = None
+        
+        # パフォーマンス統計
+        self._performance_stats = {
+            'template_time': 0,
+            'ml_time': 0,
+            'total_time': 0,
+            'frame_count': 0,
+            'ml_frame_count': 0
+        }
     
-    def register_template(self, 
-                          name: str, 
-                          template: np.ndarray, 
+    def register_template(self,
+                          name: str,
+                          template: np.ndarray,
                           threshold: float = 0.7,
                           metadata: Optional[Dict[str, Any]] = None) -> bool:
         """
@@ -447,22 +474,29 @@ class HybridSymbolRecognizer(SymbolRecognizer):
         template_success = self.template_matcher.register_template(name, template, threshold, metadata)
         
         # 機械学習認識器に登録
-        ml_success = self.ml_recognizer.register_template(name, template, threshold, metadata)
-        
-        # 登録後にモデルを再学習
-        if ml_success:
-            self.ml_recognizer.train_model()
-            # 学習後にモデルが利用可能になったかチェック
-            self.use_ml = self.ml_recognizer.model is not None
+        ml_success = True
+        if len(self.symbols) >= 1:  # 少なくとも2つのクラスが必要（モデル学習エラー回避）
+            ml_success = self.ml_recognizer.register_template(name, template, threshold, metadata)
+            
+            # 登録後にモデルを再学習（十分なクラス数がある場合のみ）
+            if ml_success and len(self.symbols) >= 2:
+                self.ml_recognizer.train_model()
+                # 学習後にモデルが利用可能になったかチェック
+                self.use_ml = self.ml_recognizer.model is not None
         
         # 親クラスのsymbolsに登録
         super().register_template(name, template, threshold, metadata)
+        
+        # キャッシュをクリア
+        self.ml_results_cache = []
         
         return template_success and ml_success
     
     def recognize_symbols(self, frame: np.ndarray) -> List[Dict[str, Any]]:
         """
         フレーム内の図柄を認識する。
+        パフォーマンス最適化のため、テンプレートマッチングを毎回実行し、
+        機械学習認識は一定間隔でのみ実行する。
         
         Args:
             frame (np.ndarray): 認識対象のフレーム画像
@@ -470,18 +504,79 @@ class HybridSymbolRecognizer(SymbolRecognizer):
         Returns:
             List[Dict[str, Any]]: 認識された図柄情報のリスト
         """
-        # テンプレートマッチングによる認識
-        template_results = self.template_matcher.recognize_symbols(frame)
+        start_time = time.time()
+        self.frame_counter += 1
+        self._performance_stats['frame_count'] += 1
         
-        # 機械学習による認識（モデルが利用可能な場合）
+        # フレームサイズが変わった場合はキャッシュをクリア
+        if self.last_frame_shape != frame.shape[:2]:
+            self.last_frame_shape = frame.shape[:2]
+            self.ml_results_cache = []
+        
+        # テンプレートマッチングによる認識（毎回実行）
+        template_start = time.time()
+        template_results = self.template_matcher.recognize_symbols(frame)
+        template_time = time.time() - template_start
+        self._performance_stats['template_time'] += template_time
+        
+        # 機械学習による認識（一定間隔でのみ実行）
         ml_results = []
-        if self.use_ml:
+        current_time = time.time()
+        ml_time = 0
+        
+        run_ml = False
+        # 機械学習認識器が利用可能で、かつ以下の条件のいずれかを満たす場合に実行
+        # 1. 指定フレーム間隔に達した
+        # 2. 最後の実行から一定時間（秒）が経過
+        # 3. キャッシュが空（初回実行時）
+        if self.use_ml and (
+            self.frame_counter % self.ml_interval == 0 or  # フレーム間隔
+            current_time - self.last_ml_time > 1.0 or     # 時間間隔（1秒）
+            not self.ml_results_cache                     # キャッシュなし
+        ):
+            ml_start = time.time()
             ml_results = self.ml_recognizer.recognize_symbols(frame)
+            ml_time = time.time() - ml_start
+            self._performance_stats['ml_time'] += ml_time
+            self._performance_stats['ml_frame_count'] += 1
+            
+            # 結果をキャッシュに保存
+            self.ml_results_cache = ml_results
+            self.last_ml_time = current_time
+            run_ml = True
+        else:
+            # キャッシュから結果を取得
+            ml_results = self.ml_results_cache
         
         # 結果を統合
         combined_results = self._merge_results(template_results, ml_results)
         
+        # 統計情報を更新
+        total_time = time.time() - start_time
+        self._performance_stats['total_time'] += total_time
+        
+        # 定期的に性能情報をログ出力（10秒ごと）
+        if current_time - self.last_ml_time < 0.1 and self._performance_stats['frame_count'] % 300 == 0:
+            self._log_performance_stats()
+        
         return combined_results
+    
+    def _log_performance_stats(self):
+        """パフォーマンス統計情報をログに出力する。"""
+        stats = self._performance_stats
+        if stats['frame_count'] > 0:
+            avg_total = stats['total_time'] / stats['frame_count']
+            avg_template = stats['template_time'] / stats['frame_count']
+            
+            avg_ml = 0
+            if stats['ml_frame_count'] > 0:
+                avg_ml = stats['ml_time'] / stats['ml_frame_count']
+            
+            ml_ratio = stats['ml_frame_count'] / stats['frame_count'] if stats['frame_count'] > 0 else 0
+            
+            logger.info(f"認識パフォーマンス: 総処理時間={avg_total:.3f}秒/フレーム, "
+                      f"テンプレート={avg_template:.3f}秒, ML={avg_ml:.3f}秒, "
+                      f"ML実行率={ml_ratio:.1%}")
     
     def _merge_results(self, 
                        template_results: List[Dict[str, Any]], 
