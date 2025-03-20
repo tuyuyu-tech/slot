@@ -22,6 +22,8 @@ from src.capture.screen_capture import ScreenCapture, VideoProcessor
 from src.recognition.symbol_recognizer import TemplateMatching, SymbolTracker
 from src.recognition.ml_symbol_recognizer import HybridSymbolRecognizer
 from src.timing.reel_analyzer import TimingManager
+from src.machine.machine_database import MachineDatabase
+from src.ui.machine_dialog import MachineDialog
 
 
 class VideoFrame(QLabel):
@@ -737,6 +739,9 @@ class MainWindow(QMainWindow):
         self.screen_capture = ScreenCapture()
         self.video_processor = VideoProcessor()
         
+        # 機種データベースの初期化
+        self.machine_database = MachineDatabase()
+        
         # 図柄認識器を初期化（ハイブリッド認識器を使用）
         try:
             self.symbol_recognizer = HybridSymbolRecognizer()
@@ -760,6 +765,10 @@ class MainWindow(QMainWindow):
         
         # キャプチャ中フラグ
         self.capturing = False
+        
+        # 自動機種判別フラグ
+        self.auto_detect_machine = False
+        self.last_detection_time = 0
         
         # 初期設定
         self.initUI()
@@ -840,6 +849,13 @@ class MainWindow(QMainWindow):
             lambda state: self.video_frame.set_show_timing(state == Qt.Checked))
         display_layout.addWidget(self.show_timing_check)
         
+        # 自動機種判別
+        self.auto_detect_check = QCheckBox("自動機種判別")
+        self.auto_detect_check.setChecked(False)
+        self.auto_detect_check.stateChanged.connect(
+            lambda state: self.set_auto_detect_machine(state == Qt.Checked))
+        display_layout.addWidget(self.auto_detect_check)
+        
         display_group.setLayout(display_layout)
         control_layout.addWidget(display_group)
         
@@ -855,6 +871,11 @@ class MainWindow(QMainWindow):
         self.save_settings_button = QPushButton("設定保存")
         self.save_settings_button.clicked.connect(self.save_settings)
         buttons_layout.addWidget(self.save_settings_button)
+        
+        # 機種管理ボタン
+        self.machine_button = QPushButton("機種管理")
+        self.machine_button.clicked.connect(self.show_machine_dialog)
+        buttons_layout.addWidget(self.machine_button)
         
         control_layout.addLayout(buttons_layout)
         
@@ -926,6 +947,28 @@ class MainWindow(QMainWindow):
                     reel_symbols[reel_id] = []
                 
                 reel_symbols[reel_id].append(symbol)
+            
+            # 自動機種判別
+            if self.auto_detect_machine and time.time() - self.last_detection_time > 5:  # 5秒ごとに判別
+                self.last_detection_time = time.time()
+                detected_machine = self.machine_database.detect_machine(processed_frame)
+                
+                if detected_machine != "default" and detected_machine != self.machine_database.current_machine:
+                    # 機種が変更された場合、タイミング予測器に新しい機種を設定
+                    self.statusBar().showMessage(f"機種「{detected_machine}」を自動判別しました")
+                    self.machine_database.set_current_machine(detected_machine)
+                    
+                    # 機種プロファイルを取得
+                    machine_data = self.machine_database.get_machine(detected_machine)
+                    if machine_data:
+                        # タイミング予測器に設定
+                        self.timing_manager.timing_predictor.register_machine_profile(
+                            detected_machine,
+                            machine_data.get("slip_frames", 1),
+                            machine_data.get("pull_in_range", 3),
+                            machine_data.get("button_to_stop_frames", 2)
+                        )
+                        self.timing_manager.timing_predictor.set_current_machine(detected_machine)
             
             # タイミング計算
             timing_results = self.timing_manager.update(reel_symbols)
@@ -1034,8 +1077,19 @@ class MainWindow(QMainWindow):
             pull_in_range (int): 引き込み範囲
             button_to_stop_frames (int): ボタンを押してからリールが停止するまでのフレーム数
         """
+        # タイミング予測器に登録
         self.timing_manager.timing_predictor.register_machine_profile(
             name, slip_frames, pull_in_range, button_to_stop_frames)
+        
+        # 機種データベースにも登録
+        machine_data = {
+            "slip_frames": slip_frames,
+            "pull_in_range": pull_in_range,
+            "button_to_stop_frames": button_to_stop_frames,
+            "reel_array": []
+        }
+        
+        self.machine_database.add_machine(name, machine_data)
         
         self.statusBar().showMessage(f"機種プロファイル「{name}」を登録しました")
         
@@ -1051,6 +1105,9 @@ class MainWindow(QMainWindow):
             name (str): 機種名
         """
         success = self.timing_manager.timing_predictor.set_current_machine(name)
+        
+        # 機種データベースの現在の機種も更新
+        self.machine_database.set_current_machine(name)
         
         if success:
             self.statusBar().showMessage(f"機種プロファイル「{name}」を選択しました")
@@ -1078,9 +1135,9 @@ class MainWindow(QMainWindow):
                 "capture_area": capture_area,
                 "human_delay": self.timing_manager.timing_predictor.human_delay,
                 "current_machine": self.timing_manager.timing_predictor.current_machine,
-                "machine_profiles": machine_profiles,
                 "show_recognition": self.show_recognition_check.isChecked(),
-                "show_timing": self.show_timing_check.isChecked()
+                "show_timing": self.show_timing_check.isChecked(),
+                "auto_detect_machine": self.auto_detect_check.isChecked()
             }
             
             # JSONに変換して保存
@@ -1175,26 +1232,30 @@ class MainWindow(QMainWindow):
                     self.timing_settings.delay_spin.setValue(settings["human_delay"])
                 
                 # 機種プロファイル設定
-                if "machine_profiles" in settings:
-                    for name, profile in settings["machine_profiles"].items():
-                        if name != "default":  # デフォルトプロファイル以外を登録
-                            self.timing_manager.timing_predictor.register_machine_profile(
-                                name, 
-                                profile["slip_frames"], 
-                                profile["pull_in_range"], 
-                                profile["button_to_stop_frames"]
-                            )
-                    
-                    # プロファイル名リストを更新
-                    profile_names = list(self.timing_manager.timing_predictor.machine_profiles.keys())
-                    self.timing_settings.update_profile_names(profile_names)
+                # 機種データベースから機種情報を取得
+                machine_names = self.machine_database.get_all_machine_names()
+                for name in machine_names:
+                    machine_data = self.machine_database.get_machine(name)
+                    if name != "default" and machine_data:  # デフォルト以外の機種を登録
+                        self.timing_manager.timing_predictor.register_machine_profile(
+                            name, 
+                            machine_data.get("slip_frames", 1), 
+                            machine_data.get("pull_in_range", 3), 
+                            machine_data.get("button_to_stop_frames", 2)
+                        )
+                
+                # プロファイル名リストを更新
+                profile_names = list(self.timing_manager.timing_predictor.machine_profiles.keys())
+                self.timing_settings.update_profile_names(profile_names)
                 
                 # 現在の機種設定
                 if "current_machine" in settings:
-                    self.timing_manager.timing_predictor.set_current_machine(settings["current_machine"])
+                    current_machine = settings["current_machine"]
+                    self.timing_manager.timing_predictor.set_current_machine(current_machine)
+                    self.machine_database.set_current_machine(current_machine)
                     
                     # UI更新
-                    index = self.timing_settings.profile_combo.findText(settings["current_machine"])
+                    index = self.timing_settings.profile_combo.findText(current_machine)
                     if index >= 0:
                         self.timing_settings.profile_combo.setCurrentIndex(index)
                 
@@ -1207,9 +1268,86 @@ class MainWindow(QMainWindow):
                     self.show_timing_check.setChecked(settings["show_timing"])
                     self.video_frame.set_show_timing(settings["show_timing"])
                 
+                # 自動機種判別設定
+                if "auto_detect_machine" in settings:
+                    self.auto_detect_check.setChecked(settings["auto_detect_machine"])
+                    self.set_auto_detect_machine(settings["auto_detect_machine"])
+                
                 self.statusBar().showMessage("設定を読み込みました")
             else:
                 self.statusBar().showMessage("設定ファイルが見つかりません。デフォルト設定を使用します。")
         
         except Exception as e:
             self.statusBar().showMessage(f"設定の読み込みに失敗しました: {str(e)}")
+            
+    def show_machine_dialog(self):
+        """機種管理ダイアログを表示する。"""
+        # キャプチャ中の場合は現在のフレームを渡す
+        current_frame = None
+        if self.video_frame.frame is not None:
+            current_frame = self.video_frame.frame.copy()
+        
+        # ダイアログを作成
+        dialog = MachineDialog(self.machine_database, self)
+        
+        # 現在のフレームを設定
+        if current_frame is not None:
+            dialog.update_frame(current_frame)
+        
+        # 機種更新時のシグナルを接続
+        dialog.machine_updated.connect(self.on_machine_updated)
+        
+        # ダイアログを表示
+        dialog.exec_()
+    
+    def on_machine_updated(self, machine_name: str):
+        """機種が更新されたときの処理。
+        
+        Args:
+            machine_name (str): 更新された機種名
+        """
+        if not machine_name:
+            return
+        
+        # 機種データベースから機種情報を取得
+        machine_data = self.machine_database.get_machine(machine_name)
+        if not machine_data:
+            return
+        
+        # タイミング予測器に機種情報を設定
+        self.timing_manager.timing_predictor.register_machine_profile(
+            machine_name,
+            machine_data.get("slip_frames", 1),
+            machine_data.get("pull_in_range", 3),
+            machine_data.get("button_to_stop_frames", 2)
+        )
+        
+        # 現在の機種を更新
+        success = self.timing_manager.timing_predictor.set_current_machine(machine_name)
+        
+        # プロファイル名リストを更新
+        profile_names = list(self.timing_manager.timing_predictor.machine_profiles.keys())
+        self.timing_settings.update_profile_names(profile_names)
+        
+        # UI更新
+        index = self.timing_settings.profile_combo.findText(machine_name)
+        if index >= 0:
+            self.timing_settings.profile_combo.setCurrentIndex(index)
+        
+        # ステータスバー更新
+        if success:
+            self.statusBar().showMessage(f"機種「{machine_name}」を選択しました")
+    
+    def set_auto_detect_machine(self, enable: bool):
+        """自動機種判別の有効/無効を設定する。
+        
+        Args:
+            enable (bool): 有効にする場合はTrue
+        """
+        self.auto_detect_machine = enable
+        if enable:
+            # 自動機種判別が有効な場合、次回のフレーム処理で判別するようにする
+            self.last_detection_time = 0
+            self.statusBar().showMessage("自動機種判別を有効にしました")
+        else:
+            self.statusBar().showMessage("自動機種判別を無効にしました")
