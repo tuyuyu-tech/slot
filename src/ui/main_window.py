@@ -12,7 +12,7 @@ import cv2
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QComboBox, QCheckBox, QSlider, QGroupBox,
-    QSpinBox, QFileDialog, QMessageBox, QTabWidget
+    QSpinBox, QFileDialog, QMessageBox, QTabWidget, qApp
 )
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen, QColor, QFont
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QRect
@@ -344,6 +344,7 @@ class SymbolRegistration(QWidget):
         super().__init__(parent)
         self.capture_frame = None
         self.selection_rect = None
+        self.registered_templates = {}  # 登録されたテンプレートを保持
         self.initUI()
     
     def initUI(self):
@@ -397,6 +398,34 @@ class SymbolRegistration(QWidget):
         
         reg_group.setLayout(reg_layout)
         layout.addWidget(reg_group)
+        
+        # 登録済みテンプレート表示グループ
+        templates_group = QGroupBox("登録済みテンプレート")
+        templates_layout = QVBoxLayout()
+        
+        # テンプレート選択
+        template_select_layout = QHBoxLayout()
+        template_select_layout.addWidget(QLabel("図柄:"))
+        self.template_combo = QComboBox()
+        self.template_combo.currentTextChanged.connect(self.show_selected_template)
+        template_select_layout.addWidget(self.template_combo)
+        templates_layout.addLayout(template_select_layout)
+        
+        # テンプレート表示ラベル
+        self.template_label = QLabel()
+        self.template_label.setMinimumSize(100, 100)
+        self.template_label.setMaximumSize(200, 200)
+        self.template_label.setAlignment(Qt.AlignCenter)
+        self.template_label.setStyleSheet("border: 1px solid gray; background-color: white;")
+        self.template_label.setText("テンプレートなし")
+        templates_layout.addWidget(self.template_label)
+        
+        # 閾値表示
+        self.template_threshold_label = QLabel("閾値: -")
+        templates_layout.addWidget(self.template_threshold_label)
+        
+        templates_group.setLayout(templates_layout)
+        layout.addWidget(templates_group)
         
         # 余白を追加
         layout.addStretch()
@@ -565,7 +594,64 @@ class SymbolRegistration(QWidget):
         self.register_button.setEnabled(False)
         self._update_display()
         
+        # 登録済みテンプレートに追加
+        self.registered_templates[name] = {
+            'template': template,
+            'threshold': threshold,
+            'metadata': metadata
+        }
+        
+        # テンプレート選択リストに追加
+        if self.template_combo.findText(name) < 0:
+            self.template_combo.addItem(name)
+        
+        # 登録したテンプレートを表示
+        self.template_combo.setCurrentText(name)
+        self.show_selected_template(name)
+        
         QMessageBox.information(self, "登録完了", f"図柄「{name}」を登録しました。")
+    
+    def show_selected_template(self, name: str) -> None:
+        """
+        選択されたテンプレートを表示する。
+        
+        Args:
+            name (str): テンプレート名
+        """
+        if not name or name not in self.registered_templates:
+            self.template_label.setText("テンプレートなし")
+            self.template_threshold_label.setText("閾値: -")
+            return
+        
+        # テンプレート情報を取得
+        template_info = self.registered_templates[name]
+        template = template_info['template']
+        threshold = template_info['threshold']
+        
+        # 閾値表示を更新
+        self.template_threshold_label.setText(f"閾値: {threshold:.2f}")
+        
+        # テンプレート画像がグレースケールならBGRに変換
+        if len(template.shape) == 2:  # グレースケール
+            template = cv2.cvtColor(template, cv2.COLOR_GRAY2BGR)
+        
+        try:
+            # テンプレート画像を表示
+            height, width, channel = template.shape
+            bytes_per_line = 3 * width
+            q_img = QImage(template.data, width, height, bytes_per_line, QImage.Format_RGB888).rgbSwapped()
+            pixmap = QPixmap.fromImage(q_img)
+            
+            # 表示サイズに合わせて拡大・縮小
+            pixmap = pixmap.scaled(self.template_label.width(), self.template_label.height(), 
+                                   Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            
+            # 画像を表示
+            self.template_label.setPixmap(pixmap)
+            
+        except Exception as e:
+            self.template_label.setText(f"テンプレート表示エラー\n{str(e)}")
+            logging.error(f"テンプレート表示エラー: {str(e)}")
 
 
 class TimingSettings(QWidget):
@@ -825,6 +911,9 @@ class MainWindow(QMainWindow):
         
         # 設定の読み込み
         self.load_settings()
+        
+        # 終了時にテンプレートを確実に保存するためのシグナル接続
+        qApp.aboutToQuit.connect(self.cleanup_resources)
     
     def initUI(self):
         """UIの初期化。"""
@@ -880,6 +969,14 @@ class MainWindow(QMainWindow):
         # 表示設定
         display_group = QGroupBox("表示設定")
         display_layout = QVBoxLayout()
+        
+        # 現在の機種表示
+        current_machine_layout = QHBoxLayout()
+        current_machine_layout.addWidget(QLabel("現在の機種:"))
+        self.current_machine_label = QLabel("デフォルト")
+        self.current_machine_label.setStyleSheet("font-weight: bold; color: blue;")
+        current_machine_layout.addWidget(self.current_machine_label)
+        display_layout.addLayout(current_machine_layout)
         
         # 認識結果表示
         self.show_recognition_check = QCheckBox("認識結果表示")
@@ -1023,6 +1120,9 @@ class MainWindow(QMainWindow):
                     self.statusBar().showMessage(f"機種「{detected_machine}」を自動判別しました")
                     self.machine_database.set_current_machine(detected_machine)
                     
+                    # UIの機種表示を更新
+                    self.current_machine_label.setText(detected_machine)
+                    
                     # 機種プロファイルを取得
                     machine_data = self.machine_database.get_machine(detected_machine)
                     if machine_data:
@@ -1088,6 +1188,18 @@ class MainWindow(QMainWindow):
             # 図柄名リストを更新
             symbol_names = list(self.symbol_recognizer.symbols.keys())
             self.timing_settings.update_symbol_names(symbol_names)
+            
+            # SymbolRegistrationクラスに登録されたテンプレートを追加
+            if hasattr(self.symbol_registration, 'registered_templates'):
+                self.symbol_registration.registered_templates[name] = {
+                    'template': template,
+                    'threshold': threshold,
+                    'metadata': metadata
+                }
+                
+                # テンプレート選択リストに追加
+                if self.symbol_registration.template_combo.findText(name) < 0:
+                    self.symbol_registration.template_combo.addItem(name)
             
             # ハイブリッド認識器を使用している場合、モデルを学習
             if hasattr(self, 'using_hybrid_recognizer') and self.using_hybrid_recognizer:
@@ -1173,6 +1285,9 @@ class MainWindow(QMainWindow):
         
         # 機種データベースの現在の機種も更新
         self.machine_database.set_current_machine(name)
+        
+        # UIの機種表示を更新
+        self.current_machine_label.setText(name)
         
         if success:
             self.statusBar().showMessage(f"機種プロファイル「{name}」を選択しました")
@@ -1320,6 +1435,7 @@ class MainWindow(QMainWindow):
                     self.machine_database.set_current_machine(current_machine)
                     
                     # UI更新
+                    self.current_machine_label.setText(current_machine)
                     index = self.timing_settings.profile_combo.findText(current_machine)
                     if index >= 0:
                         self.timing_settings.profile_combo.setCurrentIndex(index)
@@ -1338,12 +1454,51 @@ class MainWindow(QMainWindow):
                     self.auto_detect_check.setChecked(settings["auto_detect_machine"])
                     self.set_auto_detect_machine(settings["auto_detect_machine"])
                 
+                # 登録済みテンプレートを読み込み
+                self.load_registered_templates()
+                
                 self.statusBar().showMessage("設定を読み込みました")
             else:
                 self.statusBar().showMessage("設定ファイルが見つかりません。デフォルト設定を使用します。")
         
         except Exception as e:
             self.statusBar().showMessage(f"設定の読み込みに失敗しました: {str(e)}")
+            
+    def load_registered_templates(self):
+        """
+        登録済みのテンプレートをシンボル登録画面に読み込む。
+        """
+        # シンボル認識器から全テンプレートを取得
+        if hasattr(self.symbol_recognizer, 'symbols'):
+            self.symbol_registration.template_combo.clear()
+            
+            for name, symbol in self.symbol_recognizer.symbols.items():
+                # テンプレート画像と閾値を取得
+                template = symbol.template
+                threshold = symbol.threshold
+                metadata = symbol.metadata if hasattr(symbol, 'metadata') else {}
+                
+                # グレースケール画像をRGBに変換
+                if len(template.shape) == 2:  # グレースケール
+                    template = cv2.cvtColor(template, cv2.COLOR_GRAY2BGR)
+                
+                # 登録済みテンプレートに追加
+                self.symbol_registration.registered_templates[name] = {
+                    'template': template,
+                    'threshold': threshold,
+                    'metadata': metadata
+                }
+                
+                # テンプレート選択リストに追加
+                self.symbol_registration.template_combo.addItem(name)
+                logging.info(f"テンプレート「{name}」をUIに読み込みました")
+            
+            # テンプレートがあれば最初のものを選択して表示
+            if self.symbol_registration.template_combo.count() > 0:
+                first_template = self.symbol_registration.template_combo.itemText(0)
+                self.symbol_registration.template_combo.setCurrentText(first_template)
+                self.symbol_registration.show_selected_template(first_template)
+                logging.info(f"テンプレート「{first_template}」を表示しました")
             
     def show_machine_dialog(self):
         """機種管理ダイアログを表示する。"""
@@ -1395,6 +1550,7 @@ class MainWindow(QMainWindow):
         self.timing_settings.update_profile_names(profile_names)
         
         # UI更新
+        self.current_machine_label.setText(machine_name)
         index = self.timing_settings.profile_combo.findText(machine_name)
         if index >= 0:
             self.timing_settings.profile_combo.setCurrentIndex(index)
@@ -1458,3 +1614,20 @@ class MainWindow(QMainWindow):
         
         # ステータスバーを更新
         self.statusBar().showMessage("表示情報をリセットしました")
+    
+    def cleanup_resources(self):
+        """
+        アプリ終了時にリソースをクリーンアップする。
+        テンプレートや設定の保存処理を行う。
+        """
+        try:
+            # テンプレートを確実に保存
+            if hasattr(self.symbol_recognizer, '_save_templates'):
+                self.symbol_recognizer._save_templates()
+                logging.info("テンプレートを保存しました")
+            
+            # 設定を保存
+            self.save_settings()
+            logging.info("設定を保存しました")
+        except Exception as e:
+            logging.error(f"終了処理中にエラーが発生しました: {str(e)}")
