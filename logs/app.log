@@ -134,3 +134,67 @@
 2025-03-21 00:32:57,588 - src.capture.auto_calibration - WARNING - リール領域の検出に失敗しました
 2025-03-21 00:32:57,588 - src.capture.auto_calibration - INFO - キャリブレーションが完了しました: 0.00
 2025-03-21 00:34:04,826 - root - INFO - アプリケーション終了
+2025-03-21 00:39:35,862 - root - INFO - アプリケーション起動
+2025-03-21 00:39:36,485 - root - INFO - 1機種のデータを読み込みました
+2025-03-21 00:39:36,485 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:39:36,486 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:39:36,486 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:39:36,487 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:39:36,487 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:39:36,488 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:39:36,488 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 00:39:36,488 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 00:39:36,622 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 00:39:36,622 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 00:39:36,622 - root - ERROR - 機種「」は存在しません
+2025-03-21 00:39:36,623 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 00:39:36,623 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 00:39:36,623 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 00:39:36,623 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 00:40:14,638 - root - INFO - アプリケーション終了
+2025-03-21 00:40:18,071 - root - INFO - アプリケーション起動
+2025-03-21 00:40:18,677 - root - INFO - 1機種のデータを読み込みました
+2025-03-21 00:40:18,678 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:40:18,679 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:40:18,679 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:40:18,680 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:40:18,680 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:40:18,680 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:40:18,681 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 00:40:18,681 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 00:40:18,834 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 00:40:18,834 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 00:40:18,834 - root - ERROR - 機種「」は存在しません
+2025-03-21 00:40:18,834 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 00:40:18,835 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 00:40:18,835 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 00:40:18,835 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 00:40:55,339 - src.capture.auto_calibration - INFO - 自動キャリブレーションを開始します
+2025-03-21 00:40:58,478 - src.capture.auto_calibration - WARNING - リール領域の検出に失敗しました
+2025-03-21 00:40:58,478 - src.capture.auto_calibration - INFO - キャリブレーションが完了しました: 0.00
+2025-03-21 00:41:10,101 - root - INFO - アプリケーション終了
+2025-03-21 00:47:20,650 - root - INFO - アプリケーション起動
+2025-03-21 00:47:21,251 - root - INFO - 1機種のデータを読み込みました
+2025-03-21 00:47:21,252 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:47:21,253 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:47:21,253 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:47:21,254 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:47:21,254 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:47:21,255 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:47:21,255 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 00:47:21,255 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 00:47:21,390 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 00:47:21,390 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 00:47:21,390 - root - ERROR - 機種「」は存在しません
+2025-03-21 00:47:21,390 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 00:47:21,390 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 00:47:21,391 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 00:47:21,391 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 00:47:39,463 - src.capture.auto_calibration - INFO - 自動キャリブレーションを開始します
+2025-03-21 00:47:42,611 - src.capture.auto_calibration - WARNING - リール領域の検出に失敗しました
+2025-03-21 00:47:42,612 - src.capture.auto_calibration - INFO - キャリブレーションが完了しました: 0.00
+2025-03-21 00:48:00,764 - src.capture.auto_calibration - INFO - 自動キャリブレーションを開始します
+2025-03-21 00:48:03,898 - src.capture.auto_calibration - WARNING - リール領域の検出に失敗しました
+2025-03-21 00:48:03,899 - src.capture.auto_calibration - INFO - キャリブレーションが完了しました: 0.00
+2025-03-21 00:48:31,081 - root - WARNING - 有効な学習データがありません
+2025-03-21 00:49:35,248 - root - INFO - アプリケーション終了

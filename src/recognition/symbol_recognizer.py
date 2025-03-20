@@ -424,3 +424,11 @@ class SymbolTracker:
             List[Dict[str, Any]]: 追跡中の図柄リスト
         """
         return self.tracked_symbols
+    
+    def reset(self) -> None:
+        """
+        追跡中の図柄情報をすべてクリアする。
+        リセット時に使用。
+        """
+        self.tracked_symbols = []
+        logger.info("追跡中の図柄情報をリセットしました")

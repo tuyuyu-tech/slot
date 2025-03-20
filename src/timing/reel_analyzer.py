@@ -438,3 +438,24 @@ class TimingManager:
         """
         self.frame_counter = 0
         logger.info("フレームカウンターをリセットしました")
+    
+    def reset_timing_data(self) -> None:
+        """
+        タイミング関連のデータをすべてリセットする。
+        図柄表示のリセット時に使用。
+        """
+        # 目標図柄情報をクリア
+        self.target_symbols = {}
+        
+        # 各リール解析器をリセット
+        for reel_id, analyzer in self.reel_analyzers.items():
+            analyzer.position_history.clear()
+            analyzer.time_history.clear()
+            analyzer.rotation_speed = 0.0
+            analyzer.cycle_frames = 0
+            analyzer.is_stable = False
+        
+        # フレームカウンターをリセット
+        self.reset_frame_counter()
+        
+        logger.info("タイミングデータをリセットしました")

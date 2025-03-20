@@ -867,6 +867,12 @@ class MainWindow(QMainWindow):
         self.start_stop_button.clicked.connect(self.toggle_capture)
         buttons_layout.addWidget(self.start_stop_button)
         
+        # リセットボタン - 目立つように赤色で表示
+        self.reset_button = QPushButton("リセット")
+        self.reset_button.setStyleSheet("background-color: #FF5050; color: white; font-weight: bold;")
+        self.reset_button.clicked.connect(self.confirm_reset)
+        buttons_layout.addWidget(self.reset_button)
+        
         # 設定保存ボタン
         self.save_settings_button = QPushButton("設定保存")
         self.save_settings_button.clicked.connect(self.save_settings)
@@ -1351,3 +1357,45 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("自動機種判別を有効にしました")
         else:
             self.statusBar().showMessage("自動機種判別を無効にしました")
+    
+    def confirm_reset(self):
+        """
+        リセット前に確認ダイアログを表示する。
+        ユーザーが確認した場合のみリセット処理を実行する。
+        """
+        # 確認ダイアログを表示
+        reply = QMessageBox.question(
+            self,
+            'リセット確認',
+            '現在表示されている図柄や画像をすべて消去し、初期状態に戻します。\n\nよろしいですか？',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        # ユーザーが「はい」を選択した場合のみリセット処理を実行
+        if reply == QMessageBox.Yes:
+            self.reset_display()
+    
+    def reset_display(self):
+        """
+        表示されている図柄やタイミング情報をすべてリセットする。
+        """
+        # VideoFrameの図柄情報とタイミング情報をリセット
+        self.video_frame.symbols = []
+        self.video_frame.timing_results = {}
+        self.video_frame._update_display()
+        
+        # SymbolTrackerの追跡情報をリセット
+        self.symbol_tracker.reset()
+        
+        # TimingManagerの情報をリセット
+        self.timing_manager.reset_timing_data()
+        
+        # キャプチャ中の場合、次のフレーム更新で画面もクリアされる
+        if not self.capturing:
+            # キャプチャ中でない場合は、現在のフレームを表示したまま情報だけリセット
+            if self.video_frame.frame is not None:
+                self.video_frame.update_frame(self.video_frame.frame.copy())
+        
+        # ステータスバーを更新
+        self.statusBar().showMessage("表示情報をリセットしました")
