@@ -5,11 +5,12 @@ import sys
 import time
 import json
 import os
+import logging
 from typing import Dict, List, Any, Optional, Tuple
 import numpy as np
 import cv2
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QComboBox, QCheckBox, QSlider, QGroupBox,
     QSpinBox, QFileDialog, QMessageBox, QTabWidget
 )
