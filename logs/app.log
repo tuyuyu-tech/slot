@@ -478,3 +478,217 @@
 2025-03-21 01:24:41,703 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
 2025-03-21 01:24:41,703 - root - INFO - 現在の機種を「default」に設定しました
 2025-03-21 01:24:46,577 - root - INFO - アプリケーション終了
+2025-03-21 01:40:57,963 - root - INFO - アプリケーション起動
+2025-03-21 01:40:58,605 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 01:40:58,606 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:40:58,606 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:40:58,607 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:40:58,607 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:40:58,608 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:40:58,608 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:40:58,608 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 01:40:58,609 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 01:40:58,733 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 01:40:58,734 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 01:40:58,734 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 01:40:58,734 - root - ERROR - 機種「」は存在しません
+2025-03-21 01:40:58,734 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 01:40:58,734 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 01:40:58,734 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 01:40:58,734 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 01:41:19,343 - root - INFO - アプリケーション終了
+2025-03-21 01:41:22,428 - root - INFO - アプリケーション起動
+2025-03-21 01:41:23,027 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 01:41:23,027 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:41:23,028 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:41:23,028 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:41:23,029 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:41:23,029 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:41:23,030 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:41:23,030 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 01:41:23,030 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 01:41:23,162 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 01:41:23,162 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 01:41:23,163 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 01:41:23,163 - root - ERROR - 機種「」は存在しません
+2025-03-21 01:41:23,163 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 01:41:23,163 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 01:41:23,163 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 01:41:23,163 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 01:45:44,798 - root - INFO - アプリケーション起動
+2025-03-21 01:45:45,397 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 01:45:45,397 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:45:45,398 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:45:45,398 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:45:45,398 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:45:45,399 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:45:45,399 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:45:45,399 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 01:45:45,399 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 01:45:45,526 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 01:45:45,527 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 01:45:45,527 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 01:45:45,527 - root - ERROR - 機種「」は存在しません
+2025-03-21 01:45:45,527 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 01:45:45,527 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 01:45:45,527 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 01:45:45,527 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 01:45:48,043 - root - INFO - アプリケーション終了
+2025-03-21 01:46:00,103 - root - INFO - アプリケーション起動
+2025-03-21 01:46:00,686 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 01:46:00,686 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:46:00,687 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:46:00,687 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:46:00,688 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:46:00,688 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:46:00,689 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:46:00,689 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 01:46:00,689 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 01:46:00,819 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 01:46:00,820 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 01:46:00,820 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 01:46:00,820 - root - ERROR - 機種「」は存在しません
+2025-03-21 01:46:00,820 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 01:46:00,820 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 01:46:00,820 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 01:46:00,820 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 01:46:02,700 - root - INFO - アプリケーション終了
+2025-03-21 01:50:17,568 - root - INFO - アプリケーション起動
+2025-03-21 01:50:18,172 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 01:50:18,172 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:50:18,173 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:50:18,173 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:50:18,174 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:50:18,174 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:50:18,175 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:50:18,175 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 01:50:18,175 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 01:50:18,303 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 01:50:18,303 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 01:50:18,303 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 01:50:18,303 - root - ERROR - 機種「」は存在しません
+2025-03-21 01:50:18,304 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 01:50:18,304 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 01:50:18,304 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 01:50:18,304 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 01:53:55,950 - root - INFO - アプリケーション終了
+2025-03-21 02:03:11,426 - root - INFO - アプリケーション起動
+2025-03-21 02:03:12,044 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 02:03:12,044 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:03:12,046 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:03:12,046 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:03:12,047 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:03:12,047 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:03:12,048 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:03:12,048 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 02:03:12,048 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 02:03:50,259 - root - INFO - アプリケーション起動
+2025-03-21 02:03:50,869 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 02:03:50,870 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:03:50,870 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:03:50,871 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:03:50,871 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:03:50,872 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:03:50,873 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:03:50,873 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 02:03:50,873 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 02:04:36,719 - root - INFO - アプリケーション起動
+2025-03-21 02:04:37,325 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 02:04:37,325 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:04:37,326 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:04:37,327 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:04:37,328 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:04:37,328 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:04:37,329 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:04:37,329 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 02:04:37,329 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 02:04:37,455 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 02:04:37,455 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 02:04:37,455 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 02:04:37,455 - root - ERROR - 機種「」は存在しません
+2025-03-21 02:04:37,455 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 02:04:37,455 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 02:04:37,456 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 02:04:37,456 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 02:05:21,628 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを保存しました
+2025-03-21 02:05:21,628 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを登録しました: 7
+2025-03-21 02:05:21,630 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを保存しました
+2025-03-21 02:05:21,630 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを登録しました: 7
+2025-03-21 02:05:21,630 - src.recognition.ml_symbol_recognizer - INFO - 学習データの準備を開始
+2025-03-21 02:05:21,635 - src.recognition.ml_symbol_recognizer - INFO - モデルの学習を開始
+2025-03-21 02:05:21,636 - src.recognition.ml_symbol_recognizer - ERROR - モデル学習中にエラーが発生しました: The number of classes has to be greater than one; got 1 class
+2025-03-21 02:05:21,637 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを保存しました
+2025-03-21 02:05:21,637 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを登録しました: 7
+2025-03-21 02:05:21,638 - src.recognition.ml_symbol_recognizer - INFO - 学習データの準備を開始
+2025-03-21 02:05:21,642 - src.recognition.ml_symbol_recognizer - INFO - モデルの学習を開始
+2025-03-21 02:05:21,643 - src.recognition.ml_symbol_recognizer - ERROR - モデル学習中にエラーが発生しました: The number of classes has to be greater than one; got 1 class
+2025-03-21 02:06:23,563 - root - INFO - アプリケーション起動
+2025-03-21 02:06:24,290 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 02:06:24,291 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:06:24,300 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:06:24,300 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:06:24,301 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:06:24,301 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:06:24,302 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:06:24,302 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 02:06:24,303 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 02:06:24,454 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 02:06:24,455 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 02:06:24,455 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 02:06:24,455 - root - ERROR - 機種「」は存在しません
+2025-03-21 02:06:24,455 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 02:06:24,455 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 02:06:24,455 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 02:06:24,456 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 02:08:23,326 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを保存しました
+2025-03-21 02:08:23,326 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを登録しました: 7
+2025-03-21 02:08:23,327 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを保存しました
+2025-03-21 02:08:23,327 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを登録しました: 7
+2025-03-21 02:08:23,328 - src.recognition.ml_symbol_recognizer - INFO - 学習データの準備を開始
+2025-03-21 02:08:23,331 - src.recognition.ml_symbol_recognizer - INFO - モデルの学習を開始
+2025-03-21 02:08:23,332 - src.recognition.ml_symbol_recognizer - ERROR - モデル学習中にエラーが発生しました: The number of classes has to be greater than one; got 1 class
+2025-03-21 02:08:23,332 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを保存しました
+2025-03-21 02:08:23,333 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを登録しました: 7
+2025-03-21 02:08:23,333 - src.recognition.ml_symbol_recognizer - INFO - 学習データの準備を開始
+2025-03-21 02:08:23,336 - src.recognition.ml_symbol_recognizer - INFO - モデルの学習を開始
+2025-03-21 02:08:23,336 - src.recognition.ml_symbol_recognizer - ERROR - モデル学習中にエラーが発生しました: The number of classes has to be greater than one; got 1 class
+2025-03-21 02:08:31,313 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 02:08:32,074 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 02:08:32,074 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 02:08:32,075 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 02:08:32,075 - root - ERROR - 機種「」は存在しません
+2025-03-21 02:08:32,075 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 02:08:32,075 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 02:08:32,075 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 02:08:32,076 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 02:09:04,000 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 02:09:04,663 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 02:09:04,664 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 02:09:04,664 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 02:09:04,664 - root - ERROR - 機種「」は存在しません
+2025-03-21 02:09:04,664 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 02:09:04,665 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 02:09:04,665 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 02:09:04,665 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 02:09:30,192 - src.capture.auto_calibration - INFO - 自動キャリブレーションを開始します
+2025-03-21 02:10:27,075 - root - INFO - アプリケーション終了
+2025-03-21 02:10:41,908 - root - INFO - アプリケーション起動
+2025-03-21 02:10:42,516 - root - INFO - 2機種のデータを読み込みました
+2025-03-21 02:10:42,516 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:10:42,525 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:10:42,525 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:10:42,526 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:10:42,526 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 02:10:42,526 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 02:10:42,527 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 02:10:42,527 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 02:10:42,665 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 02:10:42,665 - src.timing.reel_analyzer - INFO - 機種プロファイルを登録しました: ひぐらしのなく頃に２
+2025-03-21 02:10:42,665 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 02:10:42,665 - root - ERROR - 機種「」は存在しません
+2025-03-21 02:10:42,665 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 02:10:42,665 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 02:10:42,665 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 02:10:42,666 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました
+2025-03-21 02:10:42,666 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: ひぐらしのなく頃に２
+2025-03-21 02:10:42,666 - root - INFO - 現在の機種を「ひぐらしのなく頃に２」に設定しました

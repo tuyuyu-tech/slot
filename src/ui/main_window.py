@@ -273,16 +273,51 @@ class CaptureAreaSelector(QWidget):
         self.height_spin.setValue(480)
         area_layout.addWidget(self.height_spin, 1, 3)
         
+        # 解像度プリセット
+        area_layout.addWidget(QLabel("解像度プリセット:"), 2, 0)
+        self.preset_combo = QComboBox()
+        self.preset_combo.addItem("カスタム")
+        self.preset_combo.addItem("1080p (フルHD) - 1920×1080")
+        self.preset_combo.addItem("720p (HD) - 1280×720")
+        self.preset_combo.addItem("480p (SD) - 854×480")
+        self.preset_combo.addItem("360p - 640×360")
+        self.preset_combo.addItem("240p - 426×240")
+        self.preset_combo.currentIndexChanged.connect(self.on_preset_selected)
+        area_layout.addWidget(self.preset_combo, 2, 1, 1, 3)
+        
+        # 幅/高さ変更時にプリセットを「カスタム」に戻す
+        self.width_spin.valueChanged.connect(lambda: self.preset_combo.setCurrentIndex(0))
+        self.height_spin.valueChanged.connect(lambda: self.preset_combo.setCurrentIndex(0))
+        
         # 適用ボタン
         self.apply_button = QPushButton("適用")
         self.apply_button.clicked.connect(self.on_apply)
-        area_layout.addWidget(self.apply_button, 2, 0, 1, 4)
+        area_layout.addWidget(self.apply_button, 3, 0, 1, 4)
         
         area_group.setLayout(area_layout)
         layout.addWidget(area_group)
         
         # 余白を追加
         layout.addStretch()
+    
+    def on_preset_selected(self, index):
+        """解像度プリセットが選択されたときの処理。"""
+        if index == 0:  # カスタム
+            return
+        
+        # プリセットに応じて幅と高さを設定
+        presets = {
+            1: (1920, 1080),  # 1080p (フルHD)
+            2: (1280, 720),   # 720p (HD)
+            3: (854, 480),    # 480p (SD)
+            4: (640, 360),    # 360p
+            5: (426, 240),    # 240p
+        }
+        
+        if index in presets:
+            width, height = presets[index]
+            self.width_spin.setValue(width)
+            self.height_spin.setValue(height)
     
     def on_apply(self):
         """適用ボタンが押されたときの処理。"""
