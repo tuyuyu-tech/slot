@@ -1,3 +1,10 @@
 2025-03-20 22:48:51,666 - root - INFO - アプリケーション起動
 2025-03-20 22:49:18,984 - root - INFO - アプリケーション起動
 2025-03-20 22:49:22,234 - root - INFO - アプリケーション起動
+2025-03-20 22:50:57,733 - root - INFO - アプリケーション起動
+2025-03-20 22:52:17,616 - root - INFO - アプリケーション起動
+2025-03-20 22:52:17,746 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-20 22:52:17,746 - src.recognition.symbol_recognizer - WARNING - テンプレートインデックスファイルが見つかりません: ../data/templates\index.json
+2025-03-20 22:53:08,850 - root - INFO - アプリケーション起動
+2025-03-20 22:53:08,960 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-20 22:53:08,960 - src.recognition.symbol_recognizer - WARNING - テンプレートインデックスファイルが見つかりません: ../data/templates\index.json

@@ -19,6 +19,7 @@ from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QRect
 # 自作モジュールのインポート
 from src.capture.screen_capture import ScreenCapture, VideoProcessor
 from src.recognition.symbol_recognizer import TemplateMatching, SymbolTracker
+from src.recognition.ml_symbol_recognizer import HybridSymbolRecognizer
 from src.timing.reel_analyzer import TimingManager
 
 
@@ -734,7 +735,18 @@ class MainWindow(QMainWindow):
         # モジュールの初期化
         self.screen_capture = ScreenCapture()
         self.video_processor = VideoProcessor()
-        self.symbol_recognizer = TemplateMatching()
+        
+        # 図柄認識器を初期化（ハイブリッド認識器を使用）
+        try:
+            self.symbol_recognizer = HybridSymbolRecognizer()
+            self.using_hybrid_recognizer = True
+            logging.info("ハイブリッド図柄認識器を初期化しました")
+        except Exception as e:
+            # エラー時はTemplateMatchingを使用
+            self.symbol_recognizer = TemplateMatching()
+            self.using_hybrid_recognizer = False
+            logging.warning(f"ハイブリッド図柄認識器の初期化に失敗しました: {str(e)}、テンプレートマッチングを使用します")
+        
         self.symbol_tracker = SymbolTracker()
         self.timing_manager = TimingManager()
         
@@ -781,9 +793,20 @@ class MainWindow(QMainWindow):
         control_layout.addWidget(tabs)
         
         # キャプチャタブ
+        capture_tab = QWidget()
+        capture_layout = QVBoxLayout(capture_tab)
+        
+        # キャプチャ領域選択器
         self.capture_area_selector = CaptureAreaSelector()
         self.capture_area_selector.area_selected.connect(self.set_capture_area)
-        tabs.addTab(self.capture_area_selector, "キャプチャ設定")
+        capture_layout.addWidget(self.capture_area_selector)
+        
+        # 自動キャリブレーションボタン
+        auto_calib_btn = QPushButton("自動キャリブレーション")
+        auto_calib_btn.clicked.connect(self.show_auto_calibration_dialog)
+        capture_layout.addWidget(auto_calib_btn)
+        
+        tabs.addTab(capture_tab, "キャプチャ設定")
         
         # 図柄登録タブ
         self.symbol_registration = SymbolRegistration()
@@ -909,8 +932,11 @@ class MainWindow(QMainWindow):
             # タイミング結果を表示
             self.video_frame.update_timing(timing_results)
             
+            # 認識器の種類を表示用に取得
+            recognizer_type = "ハイブリッド認識" if getattr(self, 'using_hybrid_recognizer', False) else "テンプレートマッチング"
+            
             # ステータスバー更新
-            self.statusBar().showMessage(f"キャプチャ中 - FPS: {fps:.1f} - 認識図柄: {len(tracked_symbols)}")
+            self.statusBar().showMessage(f"キャプチャ中 - FPS: {fps:.1f} - 認識図柄: {len(tracked_symbols)} - 認識方式: {recognizer_type}")
             
             # 図柄名リストを更新
             symbol_names = list(self.symbol_recognizer.symbols.keys())
@@ -953,6 +979,25 @@ class MainWindow(QMainWindow):
             # 図柄名リストを更新
             symbol_names = list(self.symbol_recognizer.symbols.keys())
             self.timing_settings.update_symbol_names(symbol_names)
+            
+            # ハイブリッド認識器を使用している場合、モデルを学習
+            if hasattr(self, 'using_hybrid_recognizer') and self.using_hybrid_recognizer:
+                try:
+                    # モデル学習（非同期で実行するとよいが、ここではシンプルに同期実行）
+                    self.statusBar().showMessage(f"図柄「{name}」を登録しました。機械学習モデルを更新中...")
+                    
+                    # MLSymbolRecognizerのモデル学習メソッドを呼び出す
+                    if hasattr(self.symbol_recognizer, 'ml_recognizer'):
+                        model_updated = self.symbol_recognizer.ml_recognizer.train_model()
+                        
+                        # モデル更新の結果を表示
+                        if model_updated:
+                            self.statusBar().showMessage(f"図柄「{name}」を登録し、機械学習モデルを更新しました")
+                        else:
+                            self.statusBar().showMessage(f"図柄「{name}」を登録しましたが、機械学習モデルの更新に失敗しました")
+                
+                except Exception as e:
+                    self.statusBar().showMessage(f"図柄「{name}」を登録しましたが、機械学習モデルの更新中にエラーが発生しました: {str(e)}")
         else:
             self.statusBar().showMessage(f"図柄「{name}」の登録に失敗しました")
     
@@ -1045,6 +1090,60 @@ class MainWindow(QMainWindow):
         
         except Exception as e:
             self.statusBar().showMessage(f"設定の保存に失敗しました: {str(e)}")
+    
+    def show_auto_calibration_dialog(self):
+        """自動キャリブレーションダイアログを表示する。"""
+        from src.ui.calibration_dialog import CalibrationDialog
+        
+        # キャプチャ中の場合は一時停止
+        was_capturing = self.capturing
+        if was_capturing:
+            self.toggle_capture()
+        
+        # ダイアログを作成
+        dialog = CalibrationDialog(self.screen_capture, self.video_processor, self)
+        
+        # キャリブレーション完了時のシグナルを接続
+        dialog.calibration_completed.connect(self.apply_calibration_result)
+        
+        # ダイアログを表示
+        result = dialog.exec_()
+        
+        # キャプチャを再開
+        if was_capturing:
+            self.toggle_capture()
+    
+    def apply_calibration_result(self, result):
+        """
+        キャリブレーション結果を適用する。
+        
+        Args:
+            result (dict): キャリブレーション結果
+                {
+                    'reel_area': (x, y, width, height),  # リール全体の領域
+                    'reel_divisions': [(x1, y1, w1, h1), ...],  # 各リールの領域
+                    'confidence': float  # 検出結果の信頼度
+                }
+        """
+        if result is None or result['reel_area'] is None:
+            self.statusBar().showMessage("キャリブレーション結果の適用に失敗しました")
+            return
+        
+        # リール領域を適用
+        x, y, width, height = result['reel_area']
+        self.screen_capture.set_capture_area(x, y, width, height)
+        
+        # UI更新
+        self.capture_area_selector.x_spin.setValue(x)
+        self.capture_area_selector.y_spin.setValue(y)
+        self.capture_area_selector.width_spin.setValue(width)
+        self.capture_area_selector.height_spin.setValue(height)
+        
+        # リール分割情報をVideoProcessorに設定
+        if result['reel_divisions']:
+            self.video_processor.reel_area = result['reel_area']
+            
+            self.statusBar().showMessage(f"キャリブレーション結果を適用しました - 信頼度: {result['confidence']:.2f}")
     
     def load_settings(self):
         """設定を読み込む。"""
