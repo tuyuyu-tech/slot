@@ -17,6 +17,17 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QPen, QColor, QFont
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QRect
 
+# 相対インポートのための処理（直接実行時の対応）
+if __name__ == "__main__":
+    import os
+    import sys
+    # 現在のファイルの絶対パスを取得
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # プロジェクトのルートディレクトリを取得（src/uiの親の親）
+    root_dir = os.path.dirname(os.path.dirname(current_dir))
+    # Pythonのパスにプロジェクトのルートを追加
+    sys.path.append(root_dir)
+
 # 自作モジュールのインポート
 from src.capture.screen_capture import ScreenCapture, VideoProcessor
 from src.recognition.symbol_recognizer import TemplateMatching, SymbolTracker
@@ -203,8 +214,8 @@ class VideoFrame(QLabel):
         q_img = QImage(display_frame.data, width, height, bytes_per_line, QImage.Format_RGB888).rgbSwapped()
         pixmap = QPixmap.fromImage(q_img)
         
-        # 表示サイズに合わせて拡大・縮小
-        pixmap = pixmap.scaled(self.width(), self.height(), Qt.KeepAspectRatio)
+        # 表示サイズに合わせて拡大・縮小（スムーズなスケーリングを追加）
+        pixmap = pixmap.scaled(self.width(), self.height(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
         
         # 画像を表示
         self.setPixmap(pixmap)
@@ -389,8 +400,8 @@ class SymbolRegistration(QWidget):
         q_img = QImage(display_frame.data, width, height, bytes_per_line, QImage.Format_RGB888).rgbSwapped()
         pixmap = QPixmap.fromImage(q_img)
         
-        # 表示サイズに合わせて拡大・縮小
-        pixmap = pixmap.scaled(self.frame_label.width(), self.frame_label.height(), Qt.KeepAspectRatio)
+        # 表示サイズに合わせて拡大・縮小（スムーズなスケーリングを追加）
+        pixmap = pixmap.scaled(self.frame_label.width(), self.frame_label.height(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
         
         # 画像を表示
         self.frame_label.setPixmap(pixmap)

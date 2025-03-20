@@ -198,3 +198,101 @@
 2025-03-21 00:48:03,899 - src.capture.auto_calibration - INFO - キャリブレーションが完了しました: 0.00
 2025-03-21 00:48:31,081 - root - WARNING - 有効な学習データがありません
 2025-03-21 00:49:35,248 - root - INFO - アプリケーション終了
+2025-03-21 00:53:57,143 - root - INFO - アプリケーション起動
+2025-03-21 00:53:57,756 - root - INFO - 1機種のデータを読み込みました
+2025-03-21 00:53:57,756 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:53:57,757 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:53:57,757 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:53:57,758 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:53:57,758 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:53:57,759 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:53:57,759 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 00:53:57,759 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 00:53:57,892 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 00:53:57,892 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 00:53:57,892 - root - ERROR - 機種「」は存在しません
+2025-03-21 00:53:57,892 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 00:53:57,893 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 00:53:57,893 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 00:53:57,893 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 00:54:32,673 - src.recognition.symbol_recognizer - INFO - 追跡中の図柄情報をリセットしました
+2025-03-21 00:54:32,674 - src.timing.reel_analyzer - INFO - フレームカウンターをリセットしました
+2025-03-21 00:54:32,674 - src.timing.reel_analyzer - INFO - タイミングデータをリセットしました
+2025-03-21 00:54:41,359 - src.recognition.symbol_recognizer - INFO - 追跡中の図柄情報をリセットしました
+2025-03-21 00:54:41,359 - src.timing.reel_analyzer - INFO - フレームカウンターをリセットしました
+2025-03-21 00:54:41,359 - src.timing.reel_analyzer - INFO - タイミングデータをリセットしました
+2025-03-21 00:54:53,492 - root - INFO - アプリケーション終了
+2025-03-21 00:54:54,300 - root - INFO - アプリケーション起動
+2025-03-21 00:54:54,902 - root - INFO - 1機種のデータを読み込みました
+2025-03-21 00:54:54,903 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:54:54,904 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:54:54,904 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:54:54,905 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:54:54,905 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:54:54,906 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:54:54,906 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 00:54:54,906 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 00:54:55,036 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 00:54:55,036 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 00:54:55,036 - root - ERROR - 機種「」は存在しません
+2025-03-21 00:54:55,036 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 00:54:55,037 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 00:54:55,037 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 00:54:55,037 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 00:55:24,469 - root - INFO - アプリケーション終了
+2025-03-21 00:55:26,745 - root - INFO - アプリケーション起動
+2025-03-21 00:55:27,328 - root - INFO - 1機種のデータを読み込みました
+2025-03-21 00:55:27,329 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:55:27,330 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:55:27,330 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:55:27,331 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:55:27,331 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:55:27,331 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:55:27,332 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 00:55:27,332 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 00:55:27,458 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 00:55:27,459 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 00:55:27,459 - root - ERROR - 機種「」は存在しません
+2025-03-21 00:55:27,459 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 00:55:27,459 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 00:55:27,459 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 00:55:27,460 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 00:56:02,657 - src.recognition.symbol_recognizer - INFO - 追跡中の図柄情報をリセットしました
+2025-03-21 00:56:02,657 - src.timing.reel_analyzer - INFO - フレームカウンターをリセットしました
+2025-03-21 00:56:02,657 - src.timing.reel_analyzer - INFO - タイミングデータをリセットしました
+2025-03-21 00:56:05,519 - root - INFO - アプリケーション終了
+2025-03-21 00:56:06,399 - root - INFO - アプリケーション起動
+2025-03-21 00:56:07,021 - root - INFO - 1機種のデータを読み込みました
+2025-03-21 00:56:07,021 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:56:07,022 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:56:07,023 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:56:07,023 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:56:07,024 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 00:56:07,025 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 00:56:07,025 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 00:56:07,025 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 00:56:07,159 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 00:56:07,159 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 00:56:07,159 - root - ERROR - 機種「」は存在しません
+2025-03-21 00:56:07,160 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 00:56:07,160 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 00:56:07,160 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 00:56:07,160 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 00:57:25,201 - root - INFO - アプリケーション終了
+2025-03-21 01:03:00,094 - root - INFO - アプリケーション起動
+2025-03-21 01:03:00,684 - root - INFO - 1機種のデータを読み込みました
+2025-03-21 01:03:00,685 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:03:00,686 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:03:00,686 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:03:00,687 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:03:00,687 - src.recognition.symbol_recognizer - INFO - テンプレートディレクトリから図柄を読み込み中: ../data/templates
+2025-03-21 01:03:00,688 - src.recognition.symbol_recognizer - INFO - 図柄テンプレートを読み込みました: 7
+2025-03-21 01:03:00,688 - src.recognition.ml_symbol_recognizer - WARNING - 学習済みモデルが見つかりません: ../data/models\symbol_classifier.joblib
+2025-03-21 01:03:00,688 - root - INFO - ハイブリッド図柄認識器を初期化しました
+2025-03-21 01:03:00,815 - src.timing.reel_analyzer - INFO - 人間の反応遅延を設定: 5 frames
+2025-03-21 01:03:00,815 - src.timing.reel_analyzer - WARNING - 指定された機種プロファイルが見つかりません: 
+2025-03-21 01:03:00,815 - root - ERROR - 機種「」は存在しません
+2025-03-21 01:03:00,815 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 01:03:00,815 - root - INFO - 現在の機種を「default」に設定しました
+2025-03-21 01:03:00,815 - src.timing.reel_analyzer - INFO - 現在の機種プロファイルを設定: default
+2025-03-21 01:03:00,816 - root - INFO - 現在の機種を「default」に設定しました
