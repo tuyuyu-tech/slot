@@ -928,14 +928,27 @@ class MainWindow(QMainWindow):
             # フレームをキャプチャ
             frame, fps = self.screen_capture.capture_frame()
             
+            # 現在の元のフレームを保存
+            original_frame = frame.copy()
+            
             # リール領域を抽出
             reel_frame = self.video_processor.extract_reel_area(frame)
             
             # リール領域が検出された場合、認識処理を実行
+            # ただし、前回のフレームを参照して急激な変化を防止する
             if reel_frame is not None:
                 processed_frame = reel_frame
+                # リール領域が検出されたときのステータス更新
+                if hasattr(self, 'using_original_frame') and self.using_original_frame:
+                    self.using_original_frame = False
+                    self.statusBar().showMessage(f"リール領域を検出しました - FPS: {fps:.1f}")
             else:
-                processed_frame = frame
+                # リール領域が検出されない場合は元のフレームを使用
+                processed_frame = original_frame
+                # 初めて検出に失敗した場合のみメッセージ表示
+                if not hasattr(self, 'using_original_frame') or not self.using_original_frame:
+                    self.using_original_frame = True
+                    self.statusBar().showMessage(f"リール領域検出に失敗しました。元のフレームを使用します - FPS: {fps:.1f}")
             
             # フレームを表示
             self.video_frame.update_frame(processed_frame)

@@ -94,11 +94,15 @@ class VideoProcessor:
     
     Attributes:
         reel_area (Optional[Tuple[int, int, int, int]]): 検出されたリール領域（x, y, width, height）
+        last_detection_time (float): 最後にリール領域を検出した時間
+        detection_timeout (float): リール領域検出のタイムアウト時間（秒）
     """
     
     def __init__(self):
         """VideoProcessorクラスの初期化。"""
         self.reel_area = None
+        self.last_detection_time = 0
+        self.detection_timeout = 2.0  # 検出タイムアウト時間（秒）
     
     def preprocess(self, frame: np.ndarray) -> np.ndarray:
         """
@@ -175,6 +179,7 @@ class VideoProcessor:
         """
         フレームからリール領域を抽出する。
         リール領域が未検出の場合は自動検出を試みる。
+        前回の検出から一定時間内であれば、検出に失敗しても前回の領域を使用する。
         
         Args:
             frame (np.ndarray): 元の画像フレーム
@@ -182,11 +187,26 @@ class VideoProcessor:
         Returns:
             Optional[np.ndarray]: 抽出されたリール領域の画像、検出できない場合はNone
         """
+        current_time = time.time()
+        
+        # リール領域が未検出の場合は自動検出を試みる
         if self.reel_area is None:
-            self.detect_reel_area(frame)
-            
-        if self.reel_area is not None:
+            if self.detect_reel_area(frame) is not None:
+                self.last_detection_time = current_time
+        else:
+            # 一定間隔で再検出を試みる（現在の検出を維持しながら）
+            if current_time - self.last_detection_time > self.detection_timeout:
+                new_area = self.detect_reel_area(frame)
+                if new_area is not None:
+                    self.last_detection_time = current_time
+        
+        # リール領域が存在し、かつタイムアウト時間内であれば領域を抽出
+        if self.reel_area is not None and (current_time - self.last_detection_time <= self.detection_timeout):
             x, y, w, h = self.reel_area
             return frame[y:y+h, x:x+w]
+        
+        # 前回の検出から時間が経過し過ぎている場合は検出結果をリセット
+        if self.reel_area is not None and (current_time - self.last_detection_time > self.detection_timeout):
+            self.reel_area = None
         
         return None
