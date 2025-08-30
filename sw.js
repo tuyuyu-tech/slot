@@ -1,5 +1,5 @@
 // Service Worker for PWA
-const CACHE_NAME = 'lamp-detector-v1.1';
+const CACHE_NAME = 'lamp-detector-v1.2';
 const urlsToCache = [
   './',
   './index.html',

@@ -143,7 +143,7 @@
         </div>
         
         <div id="status">
-            <div>v1.1 - 追跡対応</div>
+            <div>v1.2 - 固定位置</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -174,11 +174,6 @@
                 this.threshold = null;
                 this.lampLit = false;
                 this.litStartTime = null;
-                
-                // ランプ位置追跡
-                this.trackingRadius = 30; // 追跡範囲
-                this.positionHistory = [];
-                this.trackingEnabled = true;
                 
                 // 統計
                 this.frameCount = 0;
@@ -275,11 +270,6 @@
                     this.drawLampMarker();
                 }
                 
-                // ランプ位置追跡
-                if (this.lampPosition && this.isDetecting) {
-                    this.trackLampPosition();
-                }
-                
                 // 検知処理
                 if (this.isDetecting && this.lampPosition) {
                     this.detectLampChange();
@@ -359,49 +349,6 @@
                     }
                 };
                 collectBaseline();
-            }
-            
-            trackLampPosition() {
-                if (!this.lampPosition || !this.trackingEnabled) return;
-                
-                let bestPosition = this.lampPosition;
-                let bestBrightness = -1;
-                
-                // 現在位置周辺で最も明るい点を探す
-                for (let dx = -this.trackingRadius; dx <= this.trackingRadius; dx += 5) {
-                    for (let dy = -this.trackingRadius; dy <= this.trackingRadius; dy += 5) {
-                        const testX = this.lampPosition.x + dx;
-                        const testY = this.lampPosition.y + dy;
-                        
-                        if (testX < 0 || testY < 0 || testX >= this.canvas.width || testY >= this.canvas.height) continue;
-                        
-                        const brightness = this.getBrightnessAt(testX, testY);
-                        if (brightness > bestBrightness) {
-                            bestBrightness = brightness;
-                            bestPosition = { x: testX, y: testY };
-                        }
-                    }
-                }
-                
-                // 位置が大きく変わった場合のみ更新（ノイズ除去）
-                const distance = Math.sqrt(
-                    Math.pow(bestPosition.x - this.lampPosition.x, 2) + 
-                    Math.pow(bestPosition.y - this.lampPosition.y, 2)
-                );
-                
-                if (distance > 3 && distance < this.trackingRadius) {
-                    this.lampPosition = bestPosition;
-                    document.getElementById('lamp-position').textContent = 
-                        `(${this.lampPosition.x}, ${this.lampPosition.y})`;
-                }
-            }
-            
-            getBrightnessAt(x, y) {
-                const imageData = this.ctx.getImageData(x, y, 1, 1);
-                const r = imageData.data[0];
-                const g = imageData.data[1];
-                const b = imageData.data[2];
-                return (r + g + b) / 3;
             }
             
             extractLampBrightness() {
@@ -515,7 +462,6 @@
                 this.lampLit = false;
                 this.baseline = null;
                 this.brightnessHistory = [];
-                this.positionHistory = [];
                 
                 document.getElementById('lamp-position').textContent = '未設定';
                 document.getElementById('baseline').textContent = '-';
