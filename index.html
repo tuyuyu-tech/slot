@@ -80,6 +80,27 @@
             animation: pulse 1s infinite;
         }
         
+        #vita-alert {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,255,0,0.9);
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            display: none;
+            animation: vitaPulse 0.5s infinite;
+        }
+        
+        @keyframes vitaPulse {
+            0% { opacity: 1; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.8; transform: translateX(-50%) scale(1.05); }
+            100% { opacity: 1; transform: translateX(-50%) scale(1); }
+        }
+        
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.7; }
@@ -143,15 +164,20 @@
         </div>
         
         <div id="status">
-            <div>v1.2 - 固定位置</div>
+            <div>v1.3 - ビタタイミング</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
             <div>ベースライン: <span id="baseline">-</span></div>
+            <div>次回ビタ: <span id="next-vita">-</span></div>
         </div>
         
         <div id="detection-result">
             🚨 ランプ消灯検知！ 🚨
+        </div>
+        
+        <div id="vita-alert">
+            ⚡ ビタタイミング！ ⚡
         </div>
     </div>
 
@@ -174,6 +200,12 @@
                 this.threshold = null;
                 this.lampLit = false;
                 this.litStartTime = null;
+                
+                // ビタタイミング
+                this.reelStartTime = null;
+                this.vitaCycle = 0.78; // 1周期0.78秒
+                this.vitaIntervals = [];
+                this.nextVitaTime = null;
                 
                 // 統計
                 this.frameCount = 0;
@@ -400,8 +432,94 @@
                     console.log('ランプ消灯検知！継続時間:', duration + '秒');
                     
                     this.showDetectionAlert();
+                    this.startVitaTiming(); // ビタタイミング開始
                     this.lampLit = false;
                     this.litStartTime = null;
+                }
+            }
+            
+            startVitaTiming() {
+                this.reelStartTime = Date.now();
+                this.vitaIntervals.forEach(interval => clearInterval(interval));
+                this.vitaIntervals = [];
+                
+                console.log('ビタタイミング開始');
+                this.scheduleNextVita();
+            }
+            
+            scheduleNextVita() {
+                // 次のビタタイミングを計算
+                let cycleNumber = 1;
+                const scheduleVita = () => {
+                    const vitaTime = this.reelStartTime + (cycleNumber * this.vitaCycle * 1000);
+                    const now = Date.now();
+                    const delay = vitaTime - now;
+                    
+                    if (delay > 0) {
+                        // カウントダウン表示を更新
+                        this.updateVitaCountdown(cycleNumber);
+                        
+                        const timeoutId = setTimeout(() => {
+                            this.showVitaAlert(cycleNumber);
+                            cycleNumber++;
+                            scheduleVita(); // 次のサイクルをスケジュール
+                        }, delay);
+                        
+                        // タイムアウトIDを保存（リセット時にクリア用）
+                        this.vitaIntervals.push(timeoutId);
+                    }
+                };
+                scheduleVita();
+            }
+            
+            updateVitaCountdown(cycleNumber) {
+                const updateCountdown = () => {
+                    if (!this.reelStartTime) return;
+                    
+                    const now = Date.now();
+                    const nextVitaTime = this.reelStartTime + (cycleNumber * this.vitaCycle * 1000);
+                    const remaining = (nextVitaTime - now) / 1000;
+                    
+                    if (remaining > 0) {
+                        document.getElementById('next-vita').textContent = 
+                            `${cycleNumber}周目 ${remaining.toFixed(1)}秒`;
+                        setTimeout(updateCountdown, 100);
+                    } else {
+                        document.getElementById('next-vita').textContent = '-';
+                    }
+                };
+                updateCountdown();
+            }
+            
+            showVitaAlert(cycleNumber) {
+                const alert = document.getElementById('vita-alert');
+                alert.textContent = `⚡ ${cycleNumber}周目 ビタタイミング！ ⚡`;
+                alert.style.display = 'block';
+                
+                // 高音のビープ音
+                this.playVitaBeep();
+                
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 1000);
+            }
+            
+            playVitaBeep() {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(1200, audioContext.currentTime); // 高音
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.1); // 短いビープ
+                } catch (e) {
+                    console.log('音声再生不可:', e);
                 }
             }
             
@@ -463,9 +581,15 @@
                 this.baseline = null;
                 this.brightnessHistory = [];
                 
+                // ビタタイミングクリア
+                this.reelStartTime = null;
+                this.vitaIntervals.forEach(interval => clearTimeout(interval));
+                this.vitaIntervals = [];
+                
                 document.getElementById('lamp-position').textContent = '未設定';
                 document.getElementById('baseline').textContent = '-';
                 document.getElementById('detection-mode').textContent = 'オフ';
+                document.getElementById('next-vita').textContent = '-';
                 document.getElementById('detectBtn').disabled = true;
                 document.getElementById('setupBtn').disabled = false;
                 document.getElementById('setupBtn').style.background = '#007bff';
