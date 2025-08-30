@@ -1,0 +1,4 @@
+mcp_servers/
+__pycache__/
+*.pyc
+.claude/
