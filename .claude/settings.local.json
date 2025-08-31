@@ -3,7 +3,8 @@
     "allow": [
       "Read(/C:\\/**)",
       "Read(/C:\\Users/**)",
-      "Read(/C:\\Users\\User\\Downloads/**)"
+      "Read(/C:\\Users\\User\\Downloads/**)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []

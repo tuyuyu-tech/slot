@@ -158,8 +158,26 @@
             <button id="detectBtn" disabled>検知開始</button>
             <button id="resetBtn">リセット</button>
             <div style="margin-top:8px; padding:4px; background:rgba(40,40,40,0.8); border-radius:3px; font-size:10px;">
-                <div>オフセット: <input type="number" id="timing-offset" value="0" step="0.01" min="-0.5" max="0.5" style="width:40px; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:1px 2px; font-size:10px;">秒</div>
-                <div style="margin-top:2px;">周期: <input type="number" id="timing-cycle" value="0.78" step="0.01" min="0.1" max="2" style="width:40px; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:1px 2px; font-size:10px;">秒</div>
+                <div style="margin-bottom:4px;">
+                    <div style="margin-bottom:2px;">オフセット: <span id="offset-display">0.00</span>秒</div>
+                    <div style="display:flex; gap:2px;">
+                        <button type="button" id="offset-minus" style="width:20px; padding:2px; font-size:8px;">-</button>
+                        <input type="number" id="timing-offset" value="0" step="0.01" min="-0.5" max="0.5" style="flex:1; width:30px; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:1px 2px; font-size:9px;">
+                        <button type="button" id="offset-plus" style="width:20px; padding:2px; font-size:8px;">+</button>
+                    </div>
+                </div>
+                <div>
+                    <div style="margin-bottom:2px;">周期: <span id="cycle-display">0.78</span>秒</div>
+                    <input type="number" id="timing-cycle" value="0.78" step="0.01" min="0.1" max="2" style="width:50px; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:1px 2px; font-size:9px;">
+                </div>
+                <div style="margin-top:4px;">
+                    <div style="margin-bottom:2px;">検知閾値: <span id="threshold-display">30</span></div>
+                    <div style="display:flex; gap:2px;">
+                        <button type="button" id="threshold-minus" style="width:20px; padding:2px; font-size:8px;">-</button>
+                        <input type="range" id="detection-threshold" min="10" max="100" value="30" style="flex:1;">
+                        <button type="button" id="threshold-plus" style="width:20px; padding:2px; font-size:8px;">+</button>
+                    </div>
+                </div>
             </div>
             <div class="info">
                 解像度: <span id="resolution">-</span><br>
@@ -168,7 +186,7 @@
         </div>
         
         <div id="status">
-            <div>v1.4 - タイミング調整</div>
+            <div>v1.6 - 操作性向上</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -202,6 +220,7 @@
                 this.brightnessHistory = [];
                 this.baseline = null;
                 this.threshold = null;
+                this.detectionThresholdOffset = 30; // 検知閾値オフセット（調整可能）
                 this.lampLit = false;
                 this.litStartTime = null;
                 
@@ -218,6 +237,7 @@
                 this.currentFps = 0;
                 
                 this.setupEventListeners();
+                this.updateDisplays();
             }
             
             setupEventListeners() {
@@ -229,6 +249,15 @@
                 // タイミング調整
                 document.getElementById('timing-offset').onchange = () => this.updateTimingSettings();
                 document.getElementById('timing-cycle').onchange = () => this.updateTimingSettings();
+                
+                // オフセット調整ボタン
+                document.getElementById('offset-minus').onclick = () => this.adjustOffset(-0.01);
+                document.getElementById('offset-plus').onclick = () => this.adjustOffset(0.01);
+                
+                // 閾値調整
+                document.getElementById('detection-threshold').oninput = () => this.updateThresholdSettings();
+                document.getElementById('threshold-minus').onclick = () => this.adjustThreshold(-5);
+                document.getElementById('threshold-plus').onclick = () => this.adjustThreshold(5);
                 
                 this.canvas.onclick = (e) => this.onCanvasClick(e);
             }
@@ -377,11 +406,8 @@
                         const std = Math.sqrt(this.brightnessHistory.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / this.brightnessHistory.length);
                         
                         this.baseline = { mean, std };
-                        this.threshold = Math.min(
-                            mean + std,
-                            mean * 1.1,
-                            Math.max(...this.brightnessHistory) * 0.8
-                        );
+                        this.detectionThresholdOffset = parseInt(document.getElementById('detection-threshold').value);
+                        this.threshold = mean + this.detectionThresholdOffset;
                         
                         document.getElementById('baseline').textContent = 
                             `${mean.toFixed(1)} (閾値: ${this.threshold.toFixed(1)})`;
@@ -450,7 +476,44 @@
             updateTimingSettings() {
                 this.vitaOffset = parseFloat(document.getElementById('timing-offset').value);
                 this.vitaCycle = parseFloat(document.getElementById('timing-cycle').value);
+                this.updateDisplays();
                 console.log(`タイミング設定: オフセット=${this.vitaOffset}秒, 周期=${this.vitaCycle}秒`);
+            }
+            
+            adjustOffset(change) {
+                const offsetInput = document.getElementById('timing-offset');
+                const currentValue = parseFloat(offsetInput.value);
+                const newValue = Math.max(-0.5, Math.min(0.5, currentValue + change));
+                offsetInput.value = newValue.toFixed(2);
+                this.updateTimingSettings();
+            }
+            
+            updateThresholdSettings() {
+                const thresholdSlider = document.getElementById('detection-threshold');
+                const newThreshold = parseInt(thresholdSlider.value);
+                
+                if (this.baseline) {
+                    this.threshold = this.baseline.mean + newThreshold;
+                    console.log(`検知閾値更新: ${newThreshold} (実際の閾値: ${this.threshold.toFixed(1)})`);
+                }
+                this.updateDisplays();
+            }
+            
+            adjustThreshold(change) {
+                const thresholdSlider = document.getElementById('detection-threshold');
+                const currentValue = parseInt(thresholdSlider.value);
+                const newValue = Math.max(10, Math.min(100, currentValue + change));
+                thresholdSlider.value = newValue;
+                this.updateThresholdSettings();
+            }
+            
+            updateDisplays() {
+                document.getElementById('offset-display').textContent = 
+                    parseFloat(document.getElementById('timing-offset').value).toFixed(2);
+                document.getElementById('cycle-display').textContent = 
+                    parseFloat(document.getElementById('timing-cycle').value).toFixed(2);
+                document.getElementById('threshold-display').textContent = 
+                    document.getElementById('detection-threshold').value;
             }
             
             startVitaTiming() {
