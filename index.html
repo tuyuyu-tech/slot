@@ -101,6 +101,13 @@
             100% { opacity: 1; transform: translateX(-50%) scale(1); }
         }
         
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        }
+        
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.7; }
@@ -153,11 +160,21 @@
         <canvas id="canvas"></canvas>
         
         <div id="controls">
+            <div style="margin-bottom:6px; padding:3px; background:rgba(0,50,100,0.8); border-radius:3px;">
+                <select id="machine-select" style="width:100%; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:2px; font-size:10px;">
+                    <option value="machine1">機種1</option>
+                    <option value="machine2">機種2</option>
+                    <option value="machine3">機種3</option>
+                    <option value="machine4">機種4</option>
+                    <option value="machine5">機種5</option>
+                </select>
+            </div>
             <button id="startBtn">カメラ開始</button>
             <button id="setupBtn" disabled>ランプ位置設定</button>
             <button id="detectBtn" disabled>検知開始</button>
             <button id="resetBtn">リセット</button>
             <button id="esp32TestBtn" style="background:#ffc107; color:#000;">ESP32テスト</button>
+            <button id="autoModeBtn" style="background:#FF5722; color:#fff;">自動モード</button>
             <button id="toggleUIBtn" style="background:#28a745;">UI切替</button>
             <button id="disguiseBtn" style="background:#dc3545;">消灯</button>
             <div style="margin-top:8px; padding:4px; background:rgba(40,40,40,0.8); border-radius:3px; font-size:10px;">
@@ -259,6 +276,12 @@
                 this.bluetoothDevice = null;
                 this.bluetoothCharacteristic = null;
                 
+                // 機種別設定
+                this.currentMachine = 'machine1';
+                
+                // 設定保存機能
+                this.loadSettings();
+                
                 this.setupEventListeners();
                 this.updateDisplays();
             }
@@ -292,6 +315,10 @@
                 document.getElementById('esp32TestBtn').onclick = () => this.testESP32Connection();
                 document.getElementById('toggleUIBtn').onclick = () => this.toggleUI();
                 document.getElementById('disguiseBtn').onclick = () => this.toggleDisguise();
+                document.getElementById('machine-select').onchange = (e) => this.changeMachine(e.target.value);
+                
+                // 自動モード
+                document.getElementById('autoModeBtn').onclick = () => this.connectToBluetooth();
                 
                 this.canvas.onclick = (e) => this.onCanvasClick(e);
                 this.canvas.ondblclick = (e) => this.onDoubleClick(e);
@@ -512,6 +539,7 @@
                 this.vitaOffset = parseFloat(document.getElementById('timing-offset').value);
                 this.vitaCycle = parseFloat(document.getElementById('timing-cycle').value);
                 this.updateDisplays();
+                this.saveCurrentMachineSettings(); // 機種別自動保存
                 console.log(`タイミング設定: オフセット=${this.vitaOffset}秒, 周期=${this.vitaCycle}秒`);
             }
             
@@ -540,6 +568,7 @@
                     console.log(`検知閾値更新: ${newThreshold} (実際の閾値: ${this.threshold.toFixed(1)})`);
                 }
                 this.updateDisplays();
+                this.saveCurrentMachineSettings(); // 機種別自動保存
             }
             
             adjustThreshold(change) {
@@ -865,6 +894,152 @@
                 document.getElementById('setupBtn').style.background = '#007bff';
                 
                 this.updateStatus('リセット完了');
+            }
+            
+            loadSettings() {
+                try {
+                    // 最後に使用した機種を復元
+                    const lastMachine = localStorage.getItem('slotDetectorLastMachine');
+                    if (lastMachine) {
+                        this.currentMachine = lastMachine;
+                        document.getElementById('machine-select').value = lastMachine;
+                    }
+                    
+                    this.loadMachineSettings(this.currentMachine);
+                } catch (e) {
+                    console.log('設定読み込みエラー:', e);
+                }
+            }
+            
+            loadMachineSettings(machineType) {
+                try {
+                    const settings = localStorage.getItem(`slotDetectorSettings_${machineType}`);
+                    if (settings) {
+                        const data = JSON.parse(settings);
+                        
+                        // オフセット設定復元
+                        if (data.vitaOffset !== undefined) {
+                            this.vitaOffset = data.vitaOffset;
+                            document.getElementById('timing-offset').value = data.vitaOffset;
+                        }
+                        
+                        // 周期設定復元
+                        if (data.vitaCycle !== undefined) {
+                            this.vitaCycle = data.vitaCycle;
+                            document.getElementById('timing-cycle').value = data.vitaCycle;
+                        }
+                        
+                        // 検知閾値復元
+                        if (data.detectionThresholdOffset !== undefined) {
+                            this.detectionThresholdOffset = data.detectionThresholdOffset;
+                            document.getElementById('detection-threshold').value = data.detectionThresholdOffset;
+                        }
+                        
+                        // ランプ位置復元
+                        if (data.lampPosition) {
+                            this.lampPosition = data.lampPosition;
+                            document.getElementById('lamp-position').textContent = 
+                                `(${data.lampPosition.x}, ${data.lampPosition.y})`;
+                            document.getElementById('detectBtn').disabled = false;
+                        }
+                        
+                        this.updateDisplays();
+                        console.log(`${machineType} 設定読み込み完了:`, data);
+                    } else {
+                        console.log(`${machineType} の設定が見つかりません`);
+                    }
+                } catch (e) {
+                    console.log(`${machineType} 設定読み込みエラー:`, e);
+                }
+            }
+            
+            saveCurrentMachineSettings() {
+                this.saveMachineSettings(this.currentMachine);
+            }
+            
+            saveMachineSettings(machineType) {
+                try {
+                    const settings = {
+                        vitaOffset: this.vitaOffset,
+                        vitaCycle: this.vitaCycle,
+                        detectionThresholdOffset: this.detectionThresholdOffset,
+                        lampPosition: this.lampPosition,
+                        savedAt: new Date().toISOString()
+                    };
+                    
+                    localStorage.setItem(`slotDetectorSettings_${machineType}`, JSON.stringify(settings));
+                    localStorage.setItem('slotDetectorLastMachine', machineType);
+                    
+                    // 視覚的フィードバック
+                    const status = document.getElementById('current-status');
+                    const originalText = status.textContent;
+                    status.textContent = `💾 ${this.getMachineDisplayName(machineType)} 設定保存完了`;
+                    status.style.color = '#4CAF50';
+                    
+                    setTimeout(() => {
+                        status.textContent = originalText;
+                        status.style.color = '';
+                    }, 2000);
+                    
+                    console.log(`${machineType} 設定保存完了:`, settings);
+                } catch (e) {
+                    console.log('設定保存エラー:', e);
+                }
+            }
+            
+            changeMachine(machineType) {
+                // 現在の設定を保存
+                this.saveCurrentMachineSettings();
+                
+                // 新しい機種に切り替え
+                this.currentMachine = machineType;
+                
+                // 新しい機種の設定を読み込み
+                this.loadMachineSettings(machineType);
+                
+                // 状態をリセット
+                this.reset();
+                
+                // 視覚的フィードバック
+                this.showMachineChangeAlert(machineType);
+            }
+            
+            getMachineDisplayName(machineType) {
+                const names = {
+                    'machine1': '機種1',
+                    'machine2': '機種2',
+                    'machine3': '機種3',
+                    'machine4': '機種4',
+                    'machine5': '機種5'
+                };
+                return names[machineType] || machineType;
+            }
+            
+            showMachineChangeAlert(machineType) {
+                const alert = document.createElement('div');
+                alert.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(0,100,200,0.95);
+                    color: white;
+                    padding: 15px 25px;
+                    border-radius: 10px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    z-index: 2000;
+                    animation: fadeInOut 2s ease-in-out;
+                `;
+                alert.textContent = `🎰 ${this.getMachineDisplayName(machineType)} に切替`;
+                
+                document.body.appendChild(alert);
+                
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.parentNode.removeChild(alert);
+                    }
+                }, 2000);
             }
             
             updateStatus(message) {
