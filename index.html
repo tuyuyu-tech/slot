@@ -157,6 +157,8 @@
             <button id="setupBtn" disabled>ランプ位置設定</button>
             <button id="detectBtn" disabled>検知開始</button>
             <button id="resetBtn">リセット</button>
+            <button id="toggleUIBtn" style="background:#28a745;">UI切替</button>
+            <button id="disguiseBtn" style="background:#dc3545;">偽装</button>
             <div style="margin-top:8px; padding:4px; background:rgba(40,40,40,0.8); border-radius:3px; font-size:10px;">
                 <div style="margin-bottom:4px;">
                     <div style="margin-bottom:2px;">オフセット: <span id="offset-display">0.00</span>秒</div>
@@ -167,7 +169,6 @@
                         <button type="button" id="offset-plus" style="width:18px; padding:1px; font-size:7px;">+</button>
                         <button type="button" id="offset-plus-big" style="width:18px; padding:1px; font-size:7px;">++</button>
                     </div>
-                    <div style="font-size:8px; color:#888;">-- (-0.1s) / - (-0.01s) / + (+0.01s) / ++ (+0.1s)</div>
                 </div>
                 <div style="margin-bottom:4px;">
                     <div style="margin-bottom:2px;">周期: <span id="cycle-display">0.78</span>秒</div>
@@ -176,7 +177,6 @@
                         <input type="number" id="timing-cycle" value="0.78" step="0.01" min="0.1" max="2" style="flex:1; width:30px; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:1px 2px; font-size:9px;">
                         <button type="button" id="cycle-plus" style="width:18px; padding:1px; font-size:7px;">+</button>
                     </div>
-                    <div style="font-size:8px; color:#888;">- (-0.01s) / + (+0.01s)</div>
                 </div>
                 <div style="margin-top:4px;">
                     <div style="margin-bottom:2px;">検知閾値: <span id="threshold-display">30</span></div>
@@ -194,7 +194,7 @@
         </div>
         
         <div id="status">
-            <div>v1.7 - 精密調整</div>
+            <div>v1.8 - ステルスモード</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -208,6 +208,37 @@
         
         <div id="vita-alert">
             ⚡ ビタタイミング！ ⚡
+        </div>
+        
+        <!-- 偽装画面 -->
+        <div id="disguise-screen" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:#f8f9fa; color:#333; z-index:1000;">
+            <div style="padding:20px; text-align:center;">
+                <h2 style="color:#007bff; margin-bottom:30px;">📱 カメラテストアプリ</h2>
+                <div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px; margin:20px 0; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <h3>🔧 機能テスト中</h3>
+                    <p style="margin:15px 0;">カメラの動作確認を行っています。</p>
+                    <div style="background:#e9ecef; padding:10px; border-radius:4px; margin:15px 0;">
+                        <div>解像度: 1280x720</div>
+                        <div>フレームレート: 30fps</div>
+                        <div>状態: 正常動作中</div>
+                    </div>
+                </div>
+                <div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px; margin:20px 0; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <h3>📊 品質チェック</h3>
+                    <div style="background:#d4edda; color:#155724; padding:10px; border-radius:4px; margin:10px 0;">
+                        ✓ 明度レベル: 正常
+                    </div>
+                    <div style="background:#d4edda; color:#155724; padding:10px; border-radius:4px; margin:10px 0;">
+                        ✓ コントラスト: 良好
+                    </div>
+                    <div style="background:#d4edda; color:#155724; padding:10px; border-radius:4px; margin:10px 0;">
+                        ✓ フォーカス: 正常
+                    </div>
+                </div>
+                <button onclick="app.toggleDisguise()" style="background:#007bff; color:#fff; border:none; padding:12px 24px; border-radius:5px; font-size:16px; cursor:pointer; margin-top:20px;">
+                    テスト終了
+                </button>
+            </div>
         </div>
     </div>
 
@@ -244,6 +275,10 @@
                 this.lastFpsUpdate = Date.now();
                 this.currentFps = 0;
                 
+                // UI制御
+                this.uiVisible = true;
+                this.isDisguised = false;
+                
                 this.setupEventListeners();
                 this.updateDisplays();
             }
@@ -272,6 +307,10 @@
                 document.getElementById('detection-threshold').oninput = () => this.updateThresholdSettings();
                 document.getElementById('threshold-minus').onclick = () => this.adjustThreshold(-5);
                 document.getElementById('threshold-plus').onclick = () => this.adjustThreshold(5);
+                
+                // UI制御
+                document.getElementById('toggleUIBtn').onclick = () => this.toggleUI();
+                document.getElementById('disguiseBtn').onclick = () => this.toggleDisguise();
                 
                 this.canvas.onclick = (e) => this.onCanvasClick(e);
             }
@@ -538,6 +577,31 @@
                     document.getElementById('detection-threshold').value;
             }
             
+            toggleUI() {
+                this.uiVisible = !this.uiVisible;
+                const controls = document.getElementById('controls');
+                const status = document.getElementById('status');
+                
+                if (this.uiVisible) {
+                    controls.style.display = 'block';
+                    status.style.display = 'block';
+                } else {
+                    controls.style.display = 'none';
+                    status.style.display = 'none';
+                }
+            }
+            
+            toggleDisguise() {
+                this.isDisguised = !this.isDisguised;
+                const disguiseScreen = document.getElementById('disguise-screen');
+                
+                if (this.isDisguised) {
+                    disguiseScreen.style.display = 'block';
+                } else {
+                    disguiseScreen.style.display = 'none';
+                }
+            }
+            
             startVitaTiming() {
                 this.reelStartTime = Date.now();
                 this.vitaIntervals.forEach(interval => clearInterval(interval));
@@ -712,7 +776,7 @@
         }
         
         // アプリ初期化
-        const detector = new RealtimeLampDetector();
+        const app = new RealtimeLampDetector();
     </script>
 </body>
 </html>
