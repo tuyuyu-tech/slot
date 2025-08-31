@@ -195,7 +195,7 @@
         </div>
         
         <div id="status">
-            <div>v2.2 - シンプルfetch版</div>
+            <div>v2.3 - Bluetooth BLE対応</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -254,6 +254,10 @@
                 this.isDisguised = false;
                 this.lastTapTime = 0;
                 this.tapTimeout = null;
+                
+                // Bluetooth関連
+                this.bluetoothDevice = null;
+                this.bluetoothCharacteristic = null;
                 
                 this.setupEventListeners();
                 this.updateDisplays();
@@ -724,43 +728,82 @@
             
             async sendESP32Press() {
                 try {
-                    console.log('ESP32にPRESSコマンド送信中...');
+                    console.log('ESP32にBluetooth経由でPRESSコマンド送信中...');
                     
-                    // 単純版fetch（タイムアウトなし、AbortControllerなし）
-                    const response = await fetch('http://192.168.4.1/press');
-                    
-                    if (response.ok) {
-                        const result = await response.text();
-                        console.log('ESP32応答:', result);
-                        
-                        // 成功時の視覚的フィードバック
-                        const alert = document.getElementById('vita-alert');
-                        alert.style.display = 'block';
-                        alert.style.background = 'rgba(0,255,0,0.9)';
-                        alert.textContent = '🎯 自動押下実行！ 🎯';
-                        
-                        setTimeout(() => {
-                            alert.style.display = 'none';
-                        }, 1500);
-                        
-                        return true;
-                    } else {
-                        throw new Error('HTTP error: ' + response.status);
+                    if (!this.bluetoothDevice || !this.bluetoothDevice.gatt.connected) {
+                        await this.connectBluetooth();
                     }
+                    
+                    // BLEでPRESSコマンド送信
+                    const encoder = new TextEncoder();
+                    await this.bluetoothCharacteristic.writeValue(encoder.encode("PRESS"));
+                    
+                    console.log('Bluetooth経由でPRESSコマンド送信完了');
+                    
+                    // 成功時の視覚的フィードバック
+                    const alert = document.getElementById('vita-alert');
+                    alert.style.display = 'block';
+                    alert.style.background = 'rgba(0,255,0,0.9)';
+                    alert.textContent = '🎯 Bluetooth自動押下実行！ 🎯';
+                    
+                    setTimeout(() => {
+                        alert.style.display = 'none';
+                    }, 1500);
+                    
+                    return true;
                 } catch (error) {
-                    console.error('ESP32通信エラー:', error);
+                    console.error('ESP32 Bluetooth通信エラー:', error);
                     
                     // エラー時の視覚的フィードバック
                     const alert = document.getElementById('vita-alert');
                     alert.style.display = 'block';
                     alert.style.background = 'rgba(255,100,0,0.9)';
-                    alert.textContent = '⚠️ 通信エラー ⚠️';
+                    alert.textContent = '⚠️ Bluetooth通信エラー ⚠️';
                     
                     setTimeout(() => {
                         alert.style.display = 'none';
                     }, 2000);
                     
                     return false;
+                }
+            }
+            
+            async connectBluetooth() {
+                try {
+                    console.log('Bluetooth接続開始...');
+                    
+                    // Web Bluetooth APIでESP32デバイスを検索
+                    this.bluetoothDevice = await navigator.bluetooth.requestDevice({
+                        filters: [{ name: 'ESP32_SlotBot' }],
+                        optionalServices: ['12345678-1234-1234-1234-123456789abc']
+                    });
+                    
+                    console.log('デバイス選択:', this.bluetoothDevice.name);
+                    
+                    // GATT接続
+                    const server = await this.bluetoothDevice.gatt.connect();
+                    console.log('GATT接続成功');
+                    
+                    // サービス取得
+                    const service = await server.getPrimaryService('12345678-1234-1234-1234-123456789abc');
+                    console.log('サービス取得成功');
+                    
+                    // キャラクタリスティック取得
+                    this.bluetoothCharacteristic = await service.getCharacteristic('87654321-4321-4321-4321-cba987654321');
+                    console.log('キャラクタリスティック取得成功');
+                    
+                    // 切断イベント監視
+                    this.bluetoothDevice.addEventListener('gattserverdisconnected', () => {
+                        console.log('Bluetooth切断');
+                        this.bluetoothDevice = null;
+                        this.bluetoothCharacteristic = null;
+                    });
+                    
+                    console.log('Bluetooth接続完了');
+                    return true;
+                } catch (error) {
+                    console.error('Bluetooth接続エラー:', error);
+                    throw error;
                 }
             }
             
