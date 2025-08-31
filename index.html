@@ -195,7 +195,7 @@
         </div>
         
         <div id="status">
-            <div>v2.0 - ESP32自動制御対応</div>
+            <div>v2.1 - 通信エラー修正版</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -581,15 +581,28 @@
             }
             
             async testESP32Connection() {
-                document.getElementById('esp32TestBtn').textContent = '送信中...';
-                document.getElementById('esp32TestBtn').disabled = true;
+                const btn = document.getElementById('esp32TestBtn');
+                btn.textContent = '送信中...';
+                btn.disabled = true;
                 
-                await this.sendESP32Press();
+                const success = await this.sendESP32Press();
                 
+                // ボタン状態を結果に応じて更新
                 setTimeout(() => {
-                    document.getElementById('esp32TestBtn').textContent = 'ESP32テスト';
-                    document.getElementById('esp32TestBtn').disabled = false;
-                }, 2000);
+                    if (success) {
+                        btn.textContent = 'ESP32テスト';
+                        btn.style.background = '#28a745'; // 緑色
+                    } else {
+                        btn.textContent = 'ESP32テスト';
+                        btn.style.background = '#dc3545'; // 赤色
+                    }
+                    btn.disabled = false;
+                    
+                    // 3秒後に元の色に戻す
+                    setTimeout(() => {
+                        btn.style.background = '#ffc107'; // 元の黄色
+                    }, 3000);
+                }, 1000);
             }
             
             onDoubleClick(e) {
@@ -712,10 +725,17 @@
             async sendESP32Press() {
                 try {
                     console.log('ESP32にPRESSコマンド送信中...');
+                    
+                    // AbortControllerでタイムアウト制御
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 3000);
+                    
                     const response = await fetch('http://192.168.4.1/press', {
                         method: 'GET',
-                        timeout: 2000
+                        signal: controller.signal
                     });
+                    
+                    clearTimeout(timeoutId);
                     
                     if (response.ok) {
                         const result = await response.text();
@@ -723,12 +743,15 @@
                         
                         // 成功時の視覚的フィードバック
                         const alert = document.getElementById('vita-alert');
+                        alert.style.display = 'block';
                         alert.style.background = 'rgba(0,255,0,0.9)';
                         alert.textContent = '🎯 自動押下実行！ 🎯';
                         
                         setTimeout(() => {
-                            alert.style.background = 'rgba(0,255,0,0.9)';
-                        }, 500);
+                            alert.style.display = 'none';
+                        }, 1500);
+                        
+                        return true;
                     } else {
                         throw new Error('HTTP error: ' + response.status);
                     }
@@ -737,12 +760,15 @@
                     
                     // エラー時の視覚的フィードバック
                     const alert = document.getElementById('vita-alert');
+                    alert.style.display = 'block';
                     alert.style.background = 'rgba(255,100,0,0.9)';
                     alert.textContent = '⚠️ 通信エラー ⚠️';
                     
                     setTimeout(() => {
-                        alert.style.background = 'rgba(0,255,0,0.9)';
-                    }, 1000);
+                        alert.style.display = 'none';
+                    }, 2000);
+                    
+                    return false;
                 }
             }
             
