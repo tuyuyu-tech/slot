@@ -160,15 +160,23 @@
             <div style="margin-top:8px; padding:4px; background:rgba(40,40,40,0.8); border-radius:3px; font-size:10px;">
                 <div style="margin-bottom:4px;">
                     <div style="margin-bottom:2px;">オフセット: <span id="offset-display">0.00</span>秒</div>
-                    <div style="display:flex; gap:2px;">
-                        <button type="button" id="offset-minus" style="width:20px; padding:2px; font-size:8px;">-</button>
-                        <input type="number" id="timing-offset" value="0" step="0.01" min="-0.5" max="0.5" style="flex:1; width:30px; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:1px 2px; font-size:9px;">
-                        <button type="button" id="offset-plus" style="width:20px; padding:2px; font-size:8px;">+</button>
+                    <div style="display:flex; gap:1px; margin-bottom:2px;">
+                        <button type="button" id="offset-minus-big" style="width:18px; padding:1px; font-size:7px;">--</button>
+                        <button type="button" id="offset-minus" style="width:18px; padding:1px; font-size:7px;">-</button>
+                        <input type="number" id="timing-offset" value="0" step="0.01" min="-0.5" max="0.5" style="flex:1; width:25px; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:1px 2px; font-size:9px;">
+                        <button type="button" id="offset-plus" style="width:18px; padding:1px; font-size:7px;">+</button>
+                        <button type="button" id="offset-plus-big" style="width:18px; padding:1px; font-size:7px;">++</button>
                     </div>
+                    <div style="font-size:8px; color:#888;">-- (-0.1s) / - (-0.01s) / + (+0.01s) / ++ (+0.1s)</div>
                 </div>
-                <div>
+                <div style="margin-bottom:4px;">
                     <div style="margin-bottom:2px;">周期: <span id="cycle-display">0.78</span>秒</div>
-                    <input type="number" id="timing-cycle" value="0.78" step="0.01" min="0.1" max="2" style="width:50px; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:1px 2px; font-size:9px;">
+                    <div style="display:flex; gap:1px; margin-bottom:2px;">
+                        <button type="button" id="cycle-minus" style="width:18px; padding:1px; font-size:7px;">-</button>
+                        <input type="number" id="timing-cycle" value="0.78" step="0.01" min="0.1" max="2" style="flex:1; width:30px; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:1px 2px; font-size:9px;">
+                        <button type="button" id="cycle-plus" style="width:18px; padding:1px; font-size:7px;">+</button>
+                    </div>
+                    <div style="font-size:8px; color:#888;">- (-0.01s) / + (+0.01s)</div>
                 </div>
                 <div style="margin-top:4px;">
                     <div style="margin-bottom:2px;">検知閾値: <span id="threshold-display">30</span></div>
@@ -186,7 +194,7 @@
         </div>
         
         <div id="status">
-            <div>v1.6 - 操作性向上</div>
+            <div>v1.7 - 精密調整</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -251,8 +259,14 @@
                 document.getElementById('timing-cycle').onchange = () => this.updateTimingSettings();
                 
                 // オフセット調整ボタン
+                document.getElementById('offset-minus-big').onclick = () => this.adjustOffset(-0.1);
                 document.getElementById('offset-minus').onclick = () => this.adjustOffset(-0.01);
                 document.getElementById('offset-plus').onclick = () => this.adjustOffset(0.01);
+                document.getElementById('offset-plus-big').onclick = () => this.adjustOffset(0.1);
+                
+                // 周期調整ボタン
+                document.getElementById('cycle-minus').onclick = () => this.adjustCycle(-0.01);
+                document.getElementById('cycle-plus').onclick = () => this.adjustCycle(0.01);
                 
                 // 閾値調整
                 document.getElementById('detection-threshold').oninput = () => this.updateThresholdSettings();
@@ -485,6 +499,14 @@
                 const currentValue = parseFloat(offsetInput.value);
                 const newValue = Math.max(-0.5, Math.min(0.5, currentValue + change));
                 offsetInput.value = newValue.toFixed(2);
+                this.updateTimingSettings();
+            }
+            
+            adjustCycle(change) {
+                const cycleInput = document.getElementById('timing-cycle');
+                const currentValue = parseFloat(cycleInput.value);
+                const newValue = Math.max(0.1, Math.min(2.0, currentValue + change));
+                cycleInput.value = newValue.toFixed(2);
                 this.updateTimingSettings();
             }
             
