@@ -157,6 +157,7 @@
             <button id="setupBtn" disabled>ランプ位置設定</button>
             <button id="detectBtn" disabled>検知開始</button>
             <button id="resetBtn">リセット</button>
+            <button id="esp32TestBtn" style="background:#ffc107; color:#000;">ESP32テスト</button>
             <button id="toggleUIBtn" style="background:#28a745;">UI切替</button>
             <button id="disguiseBtn" style="background:#dc3545;">消灯</button>
             <div style="margin-top:8px; padding:4px; background:rgba(40,40,40,0.8); border-radius:3px; font-size:10px;">
@@ -194,7 +195,7 @@
         </div>
         
         <div id="status">
-            <div>v1.9 - ダブルタップ復帰</div>
+            <div>v2.0 - ESP32自動制御対応</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -284,6 +285,7 @@
                 document.getElementById('threshold-plus').onclick = () => this.adjustThreshold(5);
                 
                 // UI制御
+                document.getElementById('esp32TestBtn').onclick = () => this.testESP32Connection();
                 document.getElementById('toggleUIBtn').onclick = () => this.toggleUI();
                 document.getElementById('disguiseBtn').onclick = () => this.toggleDisguise();
                 
@@ -578,6 +580,18 @@
                 }
             }
             
+            async testESP32Connection() {
+                document.getElementById('esp32TestBtn').textContent = '送信中...';
+                document.getElementById('esp32TestBtn').disabled = true;
+                
+                await this.sendESP32Press();
+                
+                setTimeout(() => {
+                    document.getElementById('esp32TestBtn').textContent = 'ESP32テスト';
+                    document.getElementById('esp32TestBtn').disabled = false;
+                }, 2000);
+            }
+            
             onDoubleClick(e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -654,6 +668,9 @@
                 // 高音のビープ音
                 this.playVitaBeep();
                 
+                // ESP32に自動PRESSコマンド送信
+                this.sendESP32Press();
+                
                 setTimeout(() => {
                     alert.style.display = 'none';
                 }, 1000);
@@ -690,6 +707,43 @@
                 setTimeout(() => {
                     alert.style.display = 'none';
                 }, 3000);
+            }
+            
+            async sendESP32Press() {
+                try {
+                    console.log('ESP32にPRESSコマンド送信中...');
+                    const response = await fetch('http://192.168.4.1/press', {
+                        method: 'GET',
+                        timeout: 2000
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.text();
+                        console.log('ESP32応答:', result);
+                        
+                        // 成功時の視覚的フィードバック
+                        const alert = document.getElementById('vita-alert');
+                        alert.style.background = 'rgba(0,255,0,0.9)';
+                        alert.textContent = '🎯 自動押下実行！ 🎯';
+                        
+                        setTimeout(() => {
+                            alert.style.background = 'rgba(0,255,0,0.9)';
+                        }, 500);
+                    } else {
+                        throw new Error('HTTP error: ' + response.status);
+                    }
+                } catch (error) {
+                    console.error('ESP32通信エラー:', error);
+                    
+                    // エラー時の視覚的フィードバック
+                    const alert = document.getElementById('vita-alert');
+                    alert.style.background = 'rgba(255,100,0,0.9)';
+                    alert.textContent = '⚠️ 通信エラー ⚠️';
+                    
+                    setTimeout(() => {
+                        alert.style.background = 'rgba(0,255,0,0.9)';
+                    }, 1000);
+                }
             }
             
             playBeep() {
