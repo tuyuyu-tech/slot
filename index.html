@@ -401,7 +401,7 @@
         </div>
         
         <div id="status">
-            <div>v2.12</div>
+            <div>v2.13-debug</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -577,6 +577,13 @@
                     this.video.srcObject = this.stream;
                     
                     this.video.onloadedmetadata = () => {
+                        console.log('ビデオメタデータ読み込み完了:', {
+                            videoWidth: this.video.videoWidth,
+                            videoHeight: this.video.videoHeight,
+                            readyState: this.video.readyState,
+                            duration: this.video.duration
+                        });
+                        
                         // キャンバスサイズ調整
                         const aspectRatio = this.video.videoWidth / this.video.videoHeight;
                         const maxWidth = window.innerWidth * 0.9;
@@ -593,6 +600,13 @@
                             this.canvas.style.width = (maxHeight * aspectRatio) + 'px';
                             this.canvas.style.height = maxHeight + 'px';
                         }
+                        
+                        console.log('キャンバスサイズ設定:', {
+                            canvasWidth: this.canvas.width,
+                            canvasHeight: this.canvas.height,
+                            styleWidth: this.canvas.style.width,
+                            styleHeight: this.canvas.style.height
+                        });
                         
                         document.getElementById('resolution').textContent = 
                             `${this.video.videoWidth}x${this.video.videoHeight}`;
@@ -611,37 +625,66 @@
             }
             
             startVideoLoop() {
+                console.log('ビデオループ開始');
+                let frameCount = 0;
                 const loop = () => {
-                    if (this.video.readyState >= 2) {
-                        this.processFrame();
+                    try {
+                        if (this.video.readyState >= 2) {
+                            this.processFrame();
+                            frameCount++;
+                            if (frameCount % 60 === 0) { // 60フレームごとにログ
+                                console.log(`ビデオループ動作中: ${frameCount}フレーム処理済み`);
+                            }
+                        } else {
+                            console.log('ビデオ準備中:', this.video.readyState);
+                        }
+                        this.animationId = requestAnimationFrame(loop);
+                    } catch (error) {
+                        console.error('ビデオループエラー:', error);
+                        this.animationId = requestAnimationFrame(loop); // エラーでも継続
                     }
-                    this.animationId = requestAnimationFrame(loop);
                 };
                 loop();
             }
             
             processFrame() {
-                // フレーム描画
-                this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
-                
-                // FPS計算
-                this.frameCount++;
-                const now = Date.now();
-                if (now - this.lastFpsUpdate >= 1000) {
-                    this.currentFps = Math.round(this.frameCount * 1000 / (now - this.lastFpsUpdate));
-                    document.getElementById('fps').textContent = this.currentFps;
-                    this.frameCount = 0;
-                    this.lastFpsUpdate = now;
-                }
-                
-                // ランプ位置マーカー描画
-                if (this.lampPosition) {
-                    this.drawLampMarker();
-                }
-                
-                // 検知処理
-                if (this.isDetecting && this.lampPosition) {
-                    this.detectLampChange();
+                try {
+                    // フレーム描画
+                    if (this.video && this.ctx && this.canvas) {
+                        this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                    } else {
+                        console.error('processFrame: 必要な要素が不足', {
+                            video: !!this.video,
+                            ctx: !!this.ctx,
+                            canvas: !!this.canvas
+                        });
+                        return;
+                    }
+                    
+                    // FPS計算
+                    this.frameCount++;
+                    const now = Date.now();
+                    if (now - this.lastFpsUpdate >= 1000) {
+                        this.currentFps = Math.round(this.frameCount * 1000 / (now - this.lastFpsUpdate));
+                        const fpsElement = document.getElementById('fps');
+                        if (fpsElement) {
+                            fpsElement.textContent = this.currentFps;
+                        }
+                        this.frameCount = 0;
+                        this.lastFpsUpdate = now;
+                    }
+                    
+                    // ランプ位置マーカー描画
+                    if (this.lampPosition) {
+                        this.drawLampMarker();
+                    }
+                    
+                    // 検知処理
+                    if (this.isDetecting && this.lampPosition) {
+                        this.detectLampChange();
+                    }
+                } catch (error) {
+                    console.error('processFrame エラー:', error);
                 }
             }
             
