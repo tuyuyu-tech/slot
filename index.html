@@ -204,6 +204,14 @@
                         <button type="button" id="threshold-plus" style="width:20px; padding:2px; font-size:8px;">+</button>
                     </div>
                 </div>
+                <div style="margin-top:4px;">
+                    <div style="margin-bottom:2px;">検出範囲: <span id="radius-display">15</span>px</div>
+                    <div style="display:flex; gap:2px;">
+                        <button type="button" id="radius-minus" style="width:20px; padding:2px; font-size:8px;">-</button>
+                        <input type="range" id="detection-radius" min="5" max="30" value="15" style="flex:1;">
+                        <button type="button" id="radius-plus" style="width:20px; padding:2px; font-size:8px;">+</button>
+                    </div>
+                </div>
             </div>
             <div class="info">
                 解像度: <span id="resolution">-</span><br>
@@ -212,7 +220,7 @@
         </div>
         
         <div id="status">
-            <div>v2.6 - ワンクリック自動セットアップ</div>
+            <div>v2.7 - 完全自動＋検出範囲調整</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -279,6 +287,9 @@
                 // 機種別設定
                 this.currentMachine = 'machine1';
                 
+                // 自動モードフラグ
+                this.isAutoMode = false;
+                
                 // 設定保存機能
                 this.loadSettings();
                 
@@ -310,6 +321,11 @@
                 document.getElementById('detection-threshold').oninput = () => this.updateThresholdSettings();
                 document.getElementById('threshold-minus').onclick = () => this.adjustThreshold(-5);
                 document.getElementById('threshold-plus').onclick = () => this.adjustThreshold(5);
+                
+                // 検出範囲調整
+                document.getElementById('detection-radius').oninput = () => this.updateRadiusSettings();
+                document.getElementById('radius-minus').onclick = () => this.adjustRadius(-2);
+                document.getElementById('radius-plus').onclick = () => this.adjustRadius(2);
                 
                 // UI制御
                 document.getElementById('esp32TestBtn').onclick = () => this.testESP32Connection();
@@ -439,12 +455,33 @@
                 this.lampPosition = { x: Math.round(x), y: Math.round(y) };
                 document.getElementById('lamp-position').textContent = `(${this.lampPosition.x}, ${this.lampPosition.y})`;
                 
+                // 設定を保存
+                this.saveCurrentMachineSettings();
+                
                 this.updateStatus('ランプ位置設定完了');
                 document.getElementById('setupBtn').classList.remove('active');
                 document.getElementById('detectBtn').disabled = false;
                 
                 // ベースライン確立
                 this.establishBaseline();
+                
+                // 自動モード時は検知開始まで自動実行
+                if (this.isAutoMode) {
+                    setTimeout(() => {
+                        this.toggleDetection(); // 検知開始
+                        this.updateStatus('自動モード - 検知開始完了！');
+                        
+                        // 成功アラート
+                        const alert = document.getElementById('vita-alert');
+                        alert.style.display = 'block';
+                        alert.style.background = 'rgba(40,167,69,0.9)';
+                        alert.textContent = '🎯 準備完了！ランプ消灯を待機中';
+                        
+                        setTimeout(() => {
+                            alert.style.display = 'none';
+                        }, 2000);
+                    }, 2000); // ベースライン確立待ち
+                }
             }
             
             enterSetupMode() {
@@ -579,6 +616,24 @@
                 this.updateThresholdSettings();
             }
             
+            updateRadiusSettings() {
+                const radiusSlider = document.getElementById('detection-radius');
+                const newRadius = parseInt(radiusSlider.value);
+                
+                this.detectionRadius = newRadius;
+                this.updateDisplays();
+                this.saveCurrentMachineSettings(); // 機種別自動保存
+                console.log(`検出範囲更新: ${newRadius}px`);
+            }
+            
+            adjustRadius(change) {
+                const radiusSlider = document.getElementById('detection-radius');
+                const currentValue = parseInt(radiusSlider.value);
+                const newValue = Math.max(5, Math.min(30, currentValue + change));
+                radiusSlider.value = newValue;
+                this.updateRadiusSettings();
+            }
+            
             updateDisplays() {
                 document.getElementById('offset-display').textContent = 
                     parseFloat(document.getElementById('timing-offset').value).toFixed(2);
@@ -586,6 +641,8 @@
                     parseFloat(document.getElementById('timing-cycle').value).toFixed(3);
                 document.getElementById('threshold-display').textContent = 
                     document.getElementById('detection-threshold').value;
+                document.getElementById('radius-display').textContent = 
+                    document.getElementById('detection-radius').value;
             }
             
             toggleUI() {
@@ -810,6 +867,9 @@
                     btn.textContent = '✓ 自動モード';
                     btn.style.background = '#28a745';
                     
+                    // 自動モードフラグを設定
+                    this.isAutoMode = true;
+                    
                     // 自動でカメラ開始
                     if (!this.stream) {
                         await this.startCamera();
@@ -1001,6 +1061,12 @@
                             document.getElementById('detection-threshold').value = data.detectionThresholdOffset;
                         }
                         
+                        // 検出範囲復元
+                        if (data.detectionRadius !== undefined) {
+                            this.detectionRadius = data.detectionRadius;
+                            document.getElementById('detection-radius').value = data.detectionRadius;
+                        }
+                        
                         // ランプ位置復元
                         if (data.lampPosition) {
                             this.lampPosition = data.lampPosition;
@@ -1029,6 +1095,7 @@
                         vitaOffset: this.vitaOffset,
                         vitaCycle: this.vitaCycle,
                         detectionThresholdOffset: this.detectionThresholdOffset,
+                        detectionRadius: this.detectionRadius,
                         lampPosition: this.lampPosition,
                         savedAt: new Date().toISOString()
                     };
