@@ -401,7 +401,7 @@
         </div>
         
         <div id="status">
-            <div>v2.10</div>
+            <div>v2.11</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -492,6 +492,7 @@
                 this.uiVisible = true;
                 this.isDisguised = false;
                 this.disguiseMode = 'off'; // 'off', 'black', 'clock'
+                this.isAutoModeUIHidden = false; // 自動モードでUI非表示中かどうか
                 this.lastTapTime = 0;
                 this.tapTimeout = null;
                 
@@ -978,8 +979,9 @@
                 e.stopPropagation();
                 
                 // UI非表示または偽装中の場合、復帰させる
-                if (!this.uiVisible) {
+                if (!this.uiVisible || this.isAutoModeUIHidden) {
                     this.uiVisible = true;
+                    this.isAutoModeUIHidden = false;
                     document.getElementById('controls').style.display = 'block';
                     document.getElementById('status').style.display = 'block';
                 } else if (this.isDisguised) {
@@ -1239,6 +1241,9 @@
                     this.enterSetupMode();
                     this.updateStatus('ESP32接続完了 - ランプをタップして位置を設定してください');
                     
+                    // UI非表示（ランプマーカー以外）
+                    this.hideUIForAutoMode();
+                    
                     // 成功時の視覚的フィードバック
                     const alert = document.getElementById('vita-alert');
                     alert.style.display = 'block';
@@ -1267,6 +1272,16 @@
                         btn.style.background = '#FF5722';
                     }, 3000);
                 }
+            }
+            
+            hideUIForAutoMode() {
+                // コントロールパネルとステータスを非表示
+                document.getElementById('controls').style.display = 'none';
+                document.getElementById('status').style.display = 'none';
+                this.uiVisible = false;
+                
+                // 自動モードでUI非表示中であることを示すフラグ
+                this.isAutoModeUIHidden = true;
             }
             
             // ユーティリティ関数
