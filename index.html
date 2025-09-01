@@ -357,6 +357,7 @@
             <button id="screenshotBtn" style="background:#6c757d; color:#fff;">📸 OFF</button>
             <button id="toggleUIBtn" style="background:#28a745;">UI切替</button>
             <button id="disguiseBtn" style="background:#dc3545;">消灯</button>
+            <button id="clockBtn" style="background:#007bff;">時計</button>
             <div style="margin-top:8px; padding:4px; background:rgba(40,40,40,0.8); border-radius:3px; font-size:10px;">
                 <div style="margin-bottom:4px;">
                     <div style="margin-bottom:2px;">オフセット: <span id="offset-display">0.00</span>秒</div>
@@ -400,7 +401,7 @@
         </div>
         
         <div id="status">
-            <div>v2.9</div>
+            <div>v2.10</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -549,6 +550,7 @@
                 document.getElementById('screenshotBtn').onclick = () => this.toggleScreenshot();
                 document.getElementById('toggleUIBtn').onclick = () => this.toggleUI();
                 document.getElementById('disguiseBtn').onclick = () => this.toggleDisguise();
+                document.getElementById('clockBtn').onclick = () => this.toggleClock();
                 document.getElementById('machine-select').onchange = (e) => this.changeMachine(e.target.value);
                 
                 // 自動モード
@@ -883,43 +885,66 @@
                 const clockDisguise = document.getElementById('clock-disguise');
                 const btn = document.getElementById('disguiseBtn');
                 
-                // 3つのモードを循環: off -> black -> clock -> off
-                switch(this.disguiseMode) {
-                    case 'off':
-                        // 真っ暗モードに切り替え
-                        this.disguiseMode = 'black';
-                        this.isDisguised = true;
-                        disguiseScreen.style.display = 'block';
-                        blackDisguise.style.display = 'block';
+                // 真っ暗モードのON/OFF切り替え
+                if (this.disguiseMode === 'black') {
+                    // 真っ暗モードを解除
+                    this.disguiseMode = 'off';
+                    this.isDisguised = false;
+                    disguiseScreen.style.display = 'none';
+                    blackDisguise.style.display = 'none';
+                    btn.textContent = '消灯';
+                    btn.style.background = '#dc3545';
+                } else {
+                    // 時計モードが有効な場合は先に解除
+                    if (this.disguiseMode === 'clock') {
                         clockDisguise.style.display = 'none';
-                        btn.textContent = '時計';
-                        btn.style.background = '#6c757d';
                         disguiseClock.stop();
-                        break;
-                        
-                    case 'black':
-                        // 時計モードに切り替え
-                        this.disguiseMode = 'clock';
-                        this.isDisguised = true;
-                        disguiseScreen.style.display = 'block';
+                        document.getElementById('clockBtn').textContent = '時計';
+                        document.getElementById('clockBtn').style.background = '#007bff';
+                    }
+                    // 真っ暗モードを有効
+                    this.disguiseMode = 'black';
+                    this.isDisguised = true;
+                    disguiseScreen.style.display = 'block';
+                    blackDisguise.style.display = 'block';
+                    clockDisguise.style.display = 'none';
+                    btn.textContent = '復帰';
+                    btn.style.background = '#28a745';
+                }
+            }
+            
+            toggleClock() {
+                const disguiseScreen = document.getElementById('disguise-screen');
+                const blackDisguise = document.getElementById('black-disguise');
+                const clockDisguise = document.getElementById('clock-disguise');
+                const btn = document.getElementById('clockBtn');
+                
+                // 時計モードのON/OFF切り替え
+                if (this.disguiseMode === 'clock') {
+                    // 時計モードを解除
+                    this.disguiseMode = 'off';
+                    this.isDisguised = false;
+                    disguiseScreen.style.display = 'none';
+                    clockDisguise.style.display = 'none';
+                    btn.textContent = '時計';
+                    btn.style.background = '#007bff';
+                    disguiseClock.stop();
+                } else {
+                    // 真っ暗モードが有効な場合は先に解除
+                    if (this.disguiseMode === 'black') {
                         blackDisguise.style.display = 'none';
-                        clockDisguise.style.display = 'block';
-                        btn.textContent = '復帰';
-                        btn.style.background = '#28a745';
-                        disguiseClock.start();
-                        break;
-                        
-                    case 'clock':
-                        // オフモードに切り替え
-                        this.disguiseMode = 'off';
-                        this.isDisguised = false;
-                        disguiseScreen.style.display = 'none';
-                        blackDisguise.style.display = 'none';
-                        clockDisguise.style.display = 'none';
-                        btn.textContent = '消灯';
-                        btn.style.background = '#dc3545';
-                        disguiseClock.stop();
-                        break;
+                        document.getElementById('disguiseBtn').textContent = '消灯';
+                        document.getElementById('disguiseBtn').style.background = '#dc3545';
+                    }
+                    // 時計モードを有効
+                    this.disguiseMode = 'clock';
+                    this.isDisguised = true;
+                    disguiseScreen.style.display = 'block';
+                    blackDisguise.style.display = 'none';
+                    clockDisguise.style.display = 'block';
+                    btn.textContent = '復帰';
+                    btn.style.background = '#28a745';
+                    disguiseClock.start();
                 }
             }
             
@@ -964,9 +989,15 @@
                     document.getElementById('disguise-screen').style.display = 'none';
                     document.getElementById('black-disguise').style.display = 'none';
                     document.getElementById('clock-disguise').style.display = 'none';
-                    const btn = document.getElementById('disguiseBtn');
-                    btn.textContent = '消灯';
-                    btn.style.background = '#dc3545';
+                    
+                    // 両方のボタンを元に戻す
+                    const disguiseBtn = document.getElementById('disguiseBtn');
+                    const clockBtn = document.getElementById('clockBtn');
+                    disguiseBtn.textContent = '消灯';
+                    disguiseBtn.style.background = '#dc3545';
+                    clockBtn.textContent = '時計';
+                    clockBtn.style.background = '#007bff';
+                    
                     // 時計を停止
                     disguiseClock.stop();
                 }
