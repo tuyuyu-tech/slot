@@ -212,7 +212,7 @@
         </div>
         
         <div id="status">
-            <div>v2.5 - 高精度周期調整対応</div>
+            <div>v2.6 - ワンクリック自動セットアップ</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -805,32 +805,43 @@
                 btn.style.background = '#ffc107';
                 
                 try {
+                    // ESP32接続
                     await this.connectBluetooth();
                     btn.textContent = '✓ 自動モード';
                     btn.style.background = '#28a745';
-                    this.updateStatus('Bluetooth接続完了 - 自動モード有効');
+                    
+                    // 自動でカメラ開始
+                    if (!this.stream) {
+                        await this.startCamera();
+                        this.updateStatus('カメラ開始完了');
+                        await this.sleep(1000); // カメラ安定待ち
+                    }
+                    
+                    // 自動でランプ位置設定モードに入る
+                    this.enterSetupMode();
+                    this.updateStatus('ESP32接続完了 - ランプをタップして位置を設定してください');
                     
                     // 成功時の視覚的フィードバック
                     const alert = document.getElementById('vita-alert');
                     alert.style.display = 'block';
                     alert.style.background = 'rgba(40,167,69,0.9)';
-                    alert.textContent = '🔗 ESP32接続成功！';
+                    alert.textContent = '🎯 ランプをタップして設定！';
                     
                     setTimeout(() => {
                         alert.style.display = 'none';
-                    }, 2000);
+                    }, 3000);
                     
                 } catch (error) {
                     btn.textContent = '⚠ 接続失敗';
                     btn.style.background = '#dc3545';
                     btn.disabled = false;
-                    this.updateStatus('Bluetooth接続失敗: ' + error.message);
+                    this.updateStatus('自動モード失敗: ' + error.message);
                     
                     // エラー時の視覚的フィードバック
                     const alert = document.getElementById('vita-alert');
                     alert.style.display = 'block';
                     alert.style.background = 'rgba(220,53,69,0.9)';
-                    alert.textContent = '❌ ESP32接続失敗';
+                    alert.textContent = '❌ 自動モード失敗';
                     
                     setTimeout(() => {
                         alert.style.display = 'none';
@@ -838,6 +849,11 @@
                         btn.style.background = '#FF5722';
                     }, 3000);
                 }
+            }
+            
+            // ユーティリティ関数
+            sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
             }
             
             async connectBluetooth() {
