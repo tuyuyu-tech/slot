@@ -212,7 +212,7 @@
         </div>
         
         <div id="status">
-            <div>v2.3 - Bluetooth BLE対応</div>
+            <div>v2.5 - 高精度周期調整対応</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -846,10 +846,7 @@
                     
                     // Web Bluetooth APIでESP32デバイスを検索
                     this.bluetoothDevice = await navigator.bluetooth.requestDevice({
-                        filters: [
-                            { name: 'ESP32SlotController' },
-                            { name: 'ESP32_SlotBot' }
-                        ],
+                        filters: [{ name: 'ESP32_SlotBot' }],
                         optionalServices: ['12345678-1234-1234-1234-123456789abc']
                     });
                     
