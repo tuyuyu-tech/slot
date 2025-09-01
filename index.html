@@ -846,7 +846,10 @@
                     
                     // Web Bluetooth APIでESP32デバイスを検索
                     this.bluetoothDevice = await navigator.bluetooth.requestDevice({
-                        filters: [{ name: 'ESP32SlotController' }],
+                        filters: [
+                            { name: 'ESP32SlotController' },
+                            { name: 'ESP32_SlotBot' }
+                        ],
                         optionalServices: ['12345678-1234-1234-1234-123456789abc']
                     });
                     
