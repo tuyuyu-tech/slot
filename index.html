@@ -400,7 +400,7 @@
         </div>
         
         <div id="status">
-            <div>v2.8</div>
+            <div>v2.9</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -416,11 +416,16 @@
             ⚡ ビタタイミング！ ⚡
         </div>
         
-        <!-- 偽装画面（時計風） -->
-        <div id="disguise-screen" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; z-index:1000;" ondblclick="app.onDoubleClick(event);">
-            <div class="animated-bg"></div>
-            <div class="floating-elements" id="floatingElements"></div>
-            <div class="disguise-container">
+        <!-- 偽装画面 -->
+        <div id="disguise-screen" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; z-index:1000; background:#000;" ondblclick="app.onDoubleClick(event);">
+            <!-- 真っ暗モード -->
+            <div id="black-disguise" style="display:none; width:100%; height:100%; background:#000;"></div>
+            
+            <!-- 時計モード -->
+            <div id="clock-disguise" style="display:none; width:100%; height:100%;">
+                <div class="animated-bg"></div>
+                <div class="floating-elements" id="floatingElements"></div>
+                <div class="disguise-container">
                 <div class="clock-display">
                     <div class="time-section">
                         <div class="time-value" id="disguise-hours">00</div>
@@ -443,6 +448,7 @@
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="disguise-progressFill"></div>
+                </div>
                 </div>
             </div>
         </div>
@@ -484,6 +490,7 @@
                 // UI制御
                 this.uiVisible = true;
                 this.isDisguised = false;
+                this.disguiseMode = 'off'; // 'off', 'black', 'clock'
                 this.lastTapTime = 0;
                 this.tapTimeout = null;
                 
@@ -871,17 +878,48 @@
             }
             
             toggleDisguise() {
-                this.isDisguised = !this.isDisguised;
                 const disguiseScreen = document.getElementById('disguise-screen');
+                const blackDisguise = document.getElementById('black-disguise');
+                const clockDisguise = document.getElementById('clock-disguise');
+                const btn = document.getElementById('disguiseBtn');
                 
-                if (this.isDisguised) {
-                    disguiseScreen.style.display = 'block';
-                    // 時計を開始
-                    disguiseClock.start();
-                } else {
-                    disguiseScreen.style.display = 'none';
-                    // 時計を停止
-                    disguiseClock.stop();
+                // 3つのモードを循環: off -> black -> clock -> off
+                switch(this.disguiseMode) {
+                    case 'off':
+                        // 真っ暗モードに切り替え
+                        this.disguiseMode = 'black';
+                        this.isDisguised = true;
+                        disguiseScreen.style.display = 'block';
+                        blackDisguise.style.display = 'block';
+                        clockDisguise.style.display = 'none';
+                        btn.textContent = '時計';
+                        btn.style.background = '#6c757d';
+                        disguiseClock.stop();
+                        break;
+                        
+                    case 'black':
+                        // 時計モードに切り替え
+                        this.disguiseMode = 'clock';
+                        this.isDisguised = true;
+                        disguiseScreen.style.display = 'block';
+                        blackDisguise.style.display = 'none';
+                        clockDisguise.style.display = 'block';
+                        btn.textContent = '復帰';
+                        btn.style.background = '#28a745';
+                        disguiseClock.start();
+                        break;
+                        
+                    case 'clock':
+                        // オフモードに切り替え
+                        this.disguiseMode = 'off';
+                        this.isDisguised = false;
+                        disguiseScreen.style.display = 'none';
+                        blackDisguise.style.display = 'none';
+                        clockDisguise.style.display = 'none';
+                        btn.textContent = '消灯';
+                        btn.style.background = '#dc3545';
+                        disguiseClock.stop();
+                        break;
                 }
             }
             
@@ -920,8 +958,15 @@
                     document.getElementById('controls').style.display = 'block';
                     document.getElementById('status').style.display = 'block';
                 } else if (this.isDisguised) {
+                    // 偽装画面から復帰
+                    this.disguiseMode = 'off';
                     this.isDisguised = false;
                     document.getElementById('disguise-screen').style.display = 'none';
+                    document.getElementById('black-disguise').style.display = 'none';
+                    document.getElementById('clock-disguise').style.display = 'none';
+                    const btn = document.getElementById('disguiseBtn');
+                    btn.textContent = '消灯';
+                    btn.style.background = '#dc3545';
                     // 時計を停止
                     disguiseClock.stop();
                 }
