@@ -175,6 +175,7 @@
             <button id="resetBtn">リセット</button>
             <button id="esp32TestBtn" style="background:#ffc107; color:#000;">ESP32テスト</button>
             <button id="autoModeBtn" style="background:#FF5722; color:#fff;">自動モード</button>
+            <button id="screenshotBtn" style="background:#6c757d; color:#fff;">📸 OFF</button>
             <button id="toggleUIBtn" style="background:#28a745;">UI切替</button>
             <button id="disguiseBtn" style="background:#dc3545;">消灯</button>
             <div style="margin-top:8px; padding:4px; background:rgba(40,40,40,0.8); border-radius:3px; font-size:10px;">
@@ -220,7 +221,7 @@
         </div>
         
         <div id="status">
-            <div>v2.7a - ビタタイミング同期スクショ</div>
+            <div>v2.7b - スクショON/OFF切替対応</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -290,6 +291,9 @@
                 // 自動モードフラグ
                 this.isAutoMode = false;
                 
+                // スクリーンショット設定
+                this.screenshotEnabled = false;
+                
                 // 設定保存機能
                 this.loadSettings();
                 
@@ -329,6 +333,7 @@
                 
                 // UI制御
                 document.getElementById('esp32TestBtn').onclick = () => this.testESP32Connection();
+                document.getElementById('screenshotBtn').onclick = () => this.toggleScreenshot();
                 document.getElementById('toggleUIBtn').onclick = () => this.toggleUI();
                 document.getElementById('disguiseBtn').onclick = () => this.toggleDisguise();
                 document.getElementById('machine-select').onchange = (e) => this.changeMachine(e.target.value);
@@ -768,8 +773,10 @@
                 alert.textContent = `⚡ ${cycleNumber}周目 ビタタイミング！ ⚡`;
                 alert.style.display = 'block';
                 
-                // ビタタイミングと完全同期でスクリーンショット
-                this.captureVitaScreenshot(cycleNumber);
+                // スクリーンショット機能が有効な場合のみ実行
+                if (this.screenshotEnabled) {
+                    this.captureVitaScreenshot(cycleNumber);
+                }
                 
                 // 高音のビープ音
                 this.playVitaBeep();
@@ -780,6 +787,26 @@
                 setTimeout(() => {
                     alert.style.display = 'none';
                 }, 1000);
+            }
+            
+            toggleScreenshot() {
+                this.screenshotEnabled = !this.screenshotEnabled;
+                const btn = document.getElementById('screenshotBtn');
+                
+                if (this.screenshotEnabled) {
+                    btn.textContent = '📸 ON';
+                    btn.style.background = '#007bff';
+                    this.updateStatus('スクリーンショット: 有効');
+                } else {
+                    btn.textContent = '📸 OFF';
+                    btn.style.background = '#6c757d';
+                    this.updateStatus('スクリーンショット: 無効');
+                }
+                
+                // 設定を保存
+                this.saveCurrentMachineSettings();
+                
+                console.log('スクリーンショット機能:', this.screenshotEnabled ? '有効' : '無効');
             }
             
             captureVitaScreenshot(cycleNumber) {
@@ -1110,6 +1137,19 @@
                             document.getElementById('detection-radius').value = data.detectionRadius;
                         }
                         
+                        // スクリーンショット設定復元
+                        if (data.screenshotEnabled !== undefined) {
+                            this.screenshotEnabled = data.screenshotEnabled;
+                            const btn = document.getElementById('screenshotBtn');
+                            if (this.screenshotEnabled) {
+                                btn.textContent = '📸 ON';
+                                btn.style.background = '#007bff';
+                            } else {
+                                btn.textContent = '📸 OFF';
+                                btn.style.background = '#6c757d';
+                            }
+                        }
+                        
                         // ランプ位置復元
                         if (data.lampPosition) {
                             this.lampPosition = data.lampPosition;
@@ -1139,6 +1179,7 @@
                         vitaCycle: this.vitaCycle,
                         detectionThresholdOffset: this.detectionThresholdOffset,
                         detectionRadius: this.detectionRadius,
+                        screenshotEnabled: this.screenshotEnabled,
                         lampPosition: this.lampPosition,
                         savedAt: new Date().toISOString()
                     };
