@@ -234,6 +234,38 @@
             box-shadow: 0 0 20px rgba(0, 201, 255, 0.5);
         }
         
+        .offset-control {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 300;
+            letter-spacing: 3px;
+            opacity: 0.6;
+            color: rgba(200, 230, 255, 0.9);
+            user-select: none;
+        }
+        
+        .offset-minus, .offset-plus {
+            cursor: pointer;
+            padding: 5px 8px;
+            margin: 0 10px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+        
+        .offset-minus:hover, .offset-plus:hover {
+            background: rgba(255, 255, 255, 0.1);
+            opacity: 1;
+        }
+        
+        .offset-value {
+            font-family: 'Segoe UI', monospace;
+            margin: 0 5px;
+            min-width: 50px;
+            display: inline-block;
+        }
+        
         .floating-elements {
             position: absolute;
             width: 100%;
@@ -400,7 +432,7 @@
         </div>
         
         <div id="status">
-            <div>v2.14.4</div>
+            <div>v2.14.5</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -449,6 +481,13 @@
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="disguise-progressFill"></div>
+                </div>
+                
+                <!-- オフセット調整 -->
+                <div class="offset-control">
+                    <span class="offset-minus" onclick="app.adjustOffsetFromClock(-0.01)">-</span>
+                    <span class="offset-value" id="disguise-offset">0.00</span>
+                    <span class="offset-plus" onclick="app.adjustOffsetFromClock(0.01)">+</span>
                 </div>
                 </div>
             </div>
@@ -812,6 +851,17 @@
                 const newValue = Math.max(-0.80, Math.min(0.5, currentValue + change));
                 offsetInput.value = newValue.toFixed(2);
                 this.updateTimingSettings();
+            }
+            
+            adjustOffsetFromClock(change) {
+                this.adjustOffset(change);
+                // 時計画面の表示更新
+                this.updateClockOffsetDisplay();
+            }
+            
+            updateClockOffsetDisplay() {
+                const offsetValue = parseFloat(document.getElementById('timing-offset').value);
+                document.getElementById('disguise-offset').textContent = offsetValue.toFixed(2);
             }
             
             adjustCycle(change) {
@@ -1659,6 +1709,9 @@
                 this.updateClock();
                 this.createFloatingElements();
                 this.updateInterval = setInterval(() => this.updateClock(), 1000);
+                
+                // オフセット値の初期表示
+                app.updateClockOffsetDisplay();
             }
             
             stop() {
