@@ -401,7 +401,7 @@
         </div>
         
         <div id="status">
-            <div>v2.14</div>
+            <div>v2.14.1</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -1278,9 +1278,6 @@
                 btn.disabled = true;
                 btn.style.background = '#ffc107';
                 
-                // 自動モード開始時に即座にUI非表示
-                this.hideUIForAutoMode();
-                
                 try {
                     // ESP32接続
                     await this.connectBluetooth();
@@ -1296,6 +1293,9 @@
                         this.updateStatus('カメラ開始完了');
                         await this.sleep(1000); // カメラ安定待ち
                     }
+                    
+                    // カメラ開始完了後にUI非表示
+                    this.hideUIForAutoMode();
                     
                     // 自動でランプ位置設定モードに入る
                     this.enterSetupMode();
