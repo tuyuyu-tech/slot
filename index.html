@@ -400,12 +400,13 @@
         </div>
         
         <div id="status">
-            <div>v2.14.3</div>
+            <div>v2.14.4</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
             <div>ベースライン: <span id="baseline">-</span></div>
             <div>次回ビタ: <span id="next-vita">-</span></div>
+            <div>ビタ回数: <span id="vita-count">0/10</span></div>
         </div>
         
         <div id="detection-result">
@@ -481,6 +482,11 @@
                 this.vitaOffset = 0; // オフセット秒数（調整可能）
                 this.vitaIntervals = [];
                 this.nextVitaTime = null;
+                
+                // ビタ回数制御
+                this.vitaCount = 0;        // 現在のビタ回数
+                this.maxVitaCount = 10;    // 最大ビタ回数
+                this.vitaStopped = false;  // 停止フラグ
                 
                 // 統計
                 this.frameCount = 0;
@@ -1012,7 +1018,11 @@
                 this.vitaIntervals.forEach(interval => clearInterval(interval));
                 this.vitaIntervals = [];
                 
-                console.log(`ビタタイミング開始: オフセット=${this.vitaOffset}秒, 周期=${this.vitaCycle}秒`);
+                // ビタ回数カウンターリセット
+                this.vitaCount = 0;
+                this.vitaStopped = false;
+                
+                console.log(`ビタタイミング開始: オフセット=${this.vitaOffset}秒, 周期=${this.vitaCycle}秒, 最大${this.maxVitaCount}回`);
                 this.scheduleNextVita();
             }
             
@@ -1061,10 +1071,34 @@
             }
             
             showVitaAlert(cycleNumber) {
-                // 自動モード時はポップアップを非表示
+                // ビタ回数更新
+                this.vitaCount = cycleNumber;
+                
+                // 10回制限チェック
+                if (this.vitaCount > this.maxVitaCount) {
+                    this.vitaStopped = true;
+                    
+                    // 停止通知（自動モード時は非表示）
+                    if (!this.isAutoModeUIHidden) {
+                        const alert = document.getElementById('vita-alert');
+                        alert.textContent = `🛑 ${this.maxVitaCount}回完了 - 次のスタートまで待機`;
+                        alert.style.background = 'rgba(255,165,0,0.9)';
+                        alert.style.display = 'block';
+                        
+                        setTimeout(() => {
+                            alert.style.display = 'none';
+                        }, 3000);
+                    }
+                    
+                    console.log(`ビタタイミング停止: ${this.maxVitaCount}回完了`);
+                    return; // ESP32送信をスキップ
+                }
+                
+                // 通常のビタタイミング処理
                 if (!this.isAutoModeUIHidden) {
                     const alert = document.getElementById('vita-alert');
-                    alert.textContent = `⚡ ${cycleNumber}周目 ビタタイミング！ ⚡`;
+                    alert.textContent = `⚡ ${cycleNumber}/${this.maxVitaCount}回目 ビタタイミング！ ⚡`;
+                    alert.style.background = 'rgba(0,255,0,0.9)';
                     alert.style.display = 'block';
                     
                     setTimeout(() => {
@@ -1072,15 +1106,21 @@
                     }, 1000);
                 }
                 
-                // スクリーンショット機能は削除済み
-                
                 // 高音のビープ音
                 this.playVitaBeep();
                 
                 // ESP32に自動PRESSコマンド送信
                 this.sendESP32Press();
+                
+                console.log(`ビタタイミング実行: ${cycleNumber}/${this.maxVitaCount}回目`);
+                
+                // UI更新
+                this.updateVitaCountDisplay();
             }
             
+            updateVitaCountDisplay() {
+                document.getElementById('vita-count').textContent = `${this.vitaCount}/${this.maxVitaCount}`;
+            }
             
             captureVitaScreenshot(cycleNumber) {
                 try {
@@ -1424,10 +1464,15 @@
                 this.vitaIntervals.forEach(interval => clearTimeout(interval));
                 this.vitaIntervals = [];
                 
+                // ビタ回数カウンターリセット
+                this.vitaCount = 0;
+                this.vitaStopped = false;
+                
                 document.getElementById('lamp-position').textContent = '未設定';
                 document.getElementById('baseline').textContent = '-';
                 document.getElementById('detection-mode').textContent = 'オフ';
                 document.getElementById('next-vita').textContent = '-';
+                document.getElementById('vita-count').textContent = '0/10';
                 document.getElementById('detectBtn').disabled = true;
                 document.getElementById('setupBtn').disabled = false;
                 document.getElementById('setupBtn').style.background = '#007bff';
