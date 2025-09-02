@@ -240,30 +240,38 @@
             font-size: 16px;
             font-weight: 300;
             letter-spacing: 3px;
-            opacity: 0.6;
-            color: rgba(200, 230, 255, 0.9);
+            opacity: 0.3;
+            color: rgba(255, 255, 255, 0.4);
             user-select: none;
-        }
-        
-        .offset-minus, .offset-plus {
-            cursor: pointer;
-            padding: 5px 8px;
-            margin: 0 10px;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-            display: inline-block;
-        }
-        
-        .offset-minus:hover, .offset-plus:hover {
-            background: rgba(255, 255, 255, 0.1);
-            opacity: 1;
         }
         
         .offset-value {
             font-family: 'Segoe UI', monospace;
-            margin: 0 5px;
-            min-width: 50px;
             display: inline-block;
+        }
+        
+        .offset-tap-left, .offset-tap-right {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 25%;
+            z-index: 1001;
+            background: transparent;
+            cursor: pointer;
+            display: none; /* 時計モード時のみ表示 */
+        }
+        
+        .offset-tap-left {
+            left: 0;
+        }
+        
+        .offset-tap-right {
+            right: 0;
+        }
+        
+        .clock-disguise .offset-tap-left,
+        .clock-disguise .offset-tap-right {
+            display: block;
         }
         
         .floating-elements {
@@ -432,7 +440,7 @@
         </div>
         
         <div id="status">
-            <div>v2.14.5</div>
+            <div>v2.14.6</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -455,9 +463,14 @@
             <div id="black-disguise" style="display:none; width:100%; height:100%; background:#000;"></div>
             
             <!-- 時計モード -->
-            <div id="clock-disguise" style="display:none; width:100%; height:100%;">
+            <div id="clock-disguise" class="clock-disguise" style="display:none; width:100%; height:100%; position:relative;">
                 <div class="animated-bg"></div>
                 <div class="floating-elements" id="floatingElements"></div>
+                
+                <!-- 画面端タップエリア -->
+                <div class="offset-tap-left" onclick="app.adjustOffsetFromClock(-0.01)"></div>
+                <div class="offset-tap-right" onclick="app.adjustOffsetFromClock(0.01)"></div>
+                
                 <div class="disguise-container">
                 <div class="clock-display">
                     <div class="time-section">
@@ -485,9 +498,7 @@
                 
                 <!-- オフセット調整 -->
                 <div class="offset-control">
-                    <span class="offset-minus" onclick="app.adjustOffsetFromClock(-0.01)">-</span>
-                    <span class="offset-value" id="disguise-offset">0.00</span>
-                    <span class="offset-plus" onclick="app.adjustOffsetFromClock(0.01)">+</span>
+                    <span class="offset-value" id="disguise-offset">O0.00</span>
                 </div>
                 </div>
             </div>
@@ -861,7 +872,7 @@
             
             updateClockOffsetDisplay() {
                 const offsetValue = parseFloat(document.getElementById('timing-offset').value);
-                document.getElementById('disguise-offset').textContent = offsetValue.toFixed(2);
+                document.getElementById('disguise-offset').textContent = 'O' + offsetValue.toFixed(2);
             }
             
             adjustCycle(change) {
