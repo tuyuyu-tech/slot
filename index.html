@@ -440,7 +440,7 @@
         </div>
         
         <div id="status">
-            <div>v2.14.6</div>
+            <div>v2.14.7</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -458,9 +458,9 @@
         </div>
         
         <!-- 偽装画面 -->
-        <div id="disguise-screen" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; z-index:1000; background:#000;" ondblclick="app.onDoubleClick(event);">
+        <div id="disguise-screen" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; z-index:1000; background:#000;">
             <!-- 真っ暗モード -->
-            <div id="black-disguise" style="display:none; width:100%; height:100%; background:#000;"></div>
+            <div id="black-disguise" style="display:none; width:100%; height:100%; background:#000;" ondblclick="app.onDoubleClick(event)"></div>
             
             <!-- 時計モード -->
             <div id="clock-disguise" class="clock-disguise" style="display:none; width:100%; height:100%; position:relative;">
@@ -472,7 +472,7 @@
                 <div class="offset-tap-right" onclick="app.adjustOffsetFromClock(0.01)"></div>
                 
                 <div class="disguise-container">
-                <div class="clock-display">
+                <div class="clock-display" ondblclick="app.onDoubleClick(event)">
                     <div class="time-section">
                         <div class="time-value" id="disguise-hours">00</div>
                         <div class="time-label">Hours</div>
