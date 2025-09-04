@@ -296,14 +296,12 @@
         }
         
         .lock-icon {
-            cursor: pointer;
             font-size: 12px;
             padding: 4px;
             border-radius: 3px;
             transition: all 0.2s ease;
             min-width: 20px;
             text-align: center;
-            z-index: 1002; /* タップエリアより高い優先度 */
             position: relative;
         }
         
@@ -355,8 +353,21 @@
         .clock-disguise .offset-tap-top-left,
         .clock-disguise .offset-tap-bottom-left,
         .clock-disguise .cycle-tap-top-right,
-        .clock-disguise .cycle-tap-bottom-right {
+        .clock-disguise .cycle-tap-bottom-right,
+        .clock-disguise .lock-tap-bottom {
             display: block;
+        }
+        
+        .lock-tap-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            z-index: 1003;
+            background: transparent;
+            cursor: pointer;
+            display: none;
         }
         
         .floating-elements {
@@ -567,6 +578,7 @@
                 <div class="offset-tap-bottom-left" onclick="app.adjustOffsetFromClock(-0.01)"></div>
                 <div class="cycle-tap-top-right" onclick="app.adjustCycleFromClock(0.001)"></div>
                 <div class="cycle-tap-bottom-right" onclick="app.adjustCycleFromClock(-0.001)"></div>
+                <div class="lock-tap-bottom" onclick="app.toggleLockFromClock()"></div>
                 
                 <div class="disguise-container">
                 <div class="clock-display" ondblclick="app.onDoubleClick(event)">
@@ -603,7 +615,7 @@
                     </div>
                     <div class="adjustment-right">
                         <span class="cycle-value" id="disguise-cycle">T0.780</span>
-                        <span class="lock-icon" id="disguise-lock" onclick="app.toggleLockFromClock()">🔓</span>
+                        <span class="lock-icon" id="disguise-lock">🔓</span>
                     </div>
                 </div>
                 </div>
