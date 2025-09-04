@@ -251,15 +251,33 @@
             bottom: 15px;
             left: 0;
             right: 0;
-            display: grid;
-            grid-template-columns: 1fr auto 1fr auto;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 10px;
             padding: 0 25px;
             font-size: 11px;
-            opacity: 0.3;
-            color: rgba(255, 255, 255, 0.4);
+            opacity: 0.5;
+            color: rgba(255, 255, 255, 0.6);
             user-select: none;
+        }
+        
+        .adjustment-left {
+            flex: 1;
+            text-align: left;
+        }
+        
+        .adjustment-center {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .adjustment-right {
+            flex: 1;
+            text-align: right;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 8px;
         }
         
         .offset-value, .cycle-value, .vita-limit-value {
@@ -280,10 +298,11 @@
         .lock-icon {
             cursor: pointer;
             font-size: 12px;
-            justify-self: end;
-            padding: 2px;
+            padding: 4px;
             border-radius: 3px;
             transition: all 0.2s ease;
+            min-width: 20px;
+            text-align: center;
         }
         
         .lock-icon:hover {
@@ -570,10 +589,16 @@
                 
                 <!-- 調整値表示 -->
                 <div class="adjustment-controls">
-                    <span class="offset-value" id="disguise-offset">O0.00</span>
-                    <span class="vita-limit-value" id="disguise-vita-limit" onclick="app.toggleVitaLimitFromClock()">10</span>
-                    <span class="cycle-value" id="disguise-cycle">T0.780</span>
-                    <span class="lock-icon" id="disguise-lock" onclick="app.toggleLockFromClock()">🔓</span>
+                    <div class="adjustment-left">
+                        <span class="offset-value" id="disguise-offset">O0.00</span>
+                    </div>
+                    <div class="adjustment-center">
+                        <span class="vita-limit-value" id="disguise-vita-limit" onclick="app.toggleVitaLimitFromClock()">10</span>
+                    </div>
+                    <div class="adjustment-right">
+                        <span class="cycle-value" id="disguise-cycle">T0.780</span>
+                        <span class="lock-icon" id="disguise-lock" onclick="app.toggleLockFromClock()">🔓</span>
+                    </div>
                 </div>
                 </div>
             </div>
