@@ -245,32 +245,62 @@
             user-select: none;
         }
         
-        .offset-value {
+        /* 調整値表示 */
+        .adjustment-controls {
+            position: absolute;
+            bottom: 15px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 25px;
+            font-size: 11px;
+            opacity: 0.3;
+            color: rgba(255, 255, 255, 0.4);
+            user-select: none;
+        }
+        
+        .offset-value, .cycle-value {
             font-family: 'Segoe UI', monospace;
             display: inline-block;
         }
         
-        .offset-tap-left, .offset-tap-right {
+        /* 4分割タップエリア */
+        .offset-tap-top-left, .offset-tap-bottom-left,
+        .cycle-tap-top-right, .cycle-tap-bottom-right {
             position: absolute;
-            top: 0;
-            bottom: 0;
             width: 25%;
+            height: 50%;
             z-index: 1001;
             background: transparent;
             cursor: pointer;
-            display: none; /* 時計モード時のみ表示 */
+            display: none;
         }
         
-        .offset-tap-left {
+        .offset-tap-top-left {
             left: 0;
+            top: 0;
         }
         
-        .offset-tap-right {
+        .offset-tap-bottom-left {
+            left: 0;
+            bottom: 0;
+        }
+        
+        .cycle-tap-top-right {
             right: 0;
+            top: 0;
         }
         
-        .clock-disguise .offset-tap-left,
-        .clock-disguise .offset-tap-right {
+        .cycle-tap-bottom-right {
+            right: 0;
+            bottom: 0;
+        }
+        
+        .clock-disguise .offset-tap-top-left,
+        .clock-disguise .offset-tap-bottom-left,
+        .clock-disguise .cycle-tap-top-right,
+        .clock-disguise .cycle-tap-bottom-right {
             display: block;
         }
         
@@ -467,9 +497,11 @@
                 <div class="animated-bg"></div>
                 <div class="floating-elements" id="floatingElements"></div>
                 
-                <!-- 画面端タップエリア -->
-                <div class="offset-tap-left" onclick="app.adjustOffsetFromClock(-0.01)"></div>
-                <div class="offset-tap-right" onclick="app.adjustOffsetFromClock(0.01)"></div>
+                <!-- 画面角タップエリア -->
+                <div class="offset-tap-top-left" onclick="app.adjustOffsetFromClock(0.01)"></div>
+                <div class="offset-tap-bottom-left" onclick="app.adjustOffsetFromClock(-0.01)"></div>
+                <div class="cycle-tap-top-right" onclick="app.adjustCycleFromClock(0.001)"></div>
+                <div class="cycle-tap-bottom-right" onclick="app.adjustCycleFromClock(-0.001)"></div>
                 
                 <div class="disguise-container">
                 <div class="clock-display" ondblclick="app.onDoubleClick(event)">
@@ -496,9 +528,10 @@
                     <div class="progress-fill" id="disguise-progressFill"></div>
                 </div>
                 
-                <!-- オフセット調整 -->
-                <div class="offset-control">
+                <!-- 調整値表示 -->
+                <div class="adjustment-controls">
                     <span class="offset-value" id="disguise-offset">O0.00</span>
+                    <span class="cycle-value" id="disguise-cycle">T0.780</span>
                 </div>
                 </div>
             </div>
@@ -866,13 +899,27 @@
             
             adjustOffsetFromClock(change) {
                 this.adjustOffset(change);
-                // 時計画面の表示更新
+                this.updateClockDisplays();
+            }
+            
+            adjustCycleFromClock(change) {
+                this.adjustCycle(change);
+                this.updateClockDisplays();
+            }
+            
+            updateClockDisplays() {
                 this.updateClockOffsetDisplay();
+                this.updateClockCycleDisplay();
             }
             
             updateClockOffsetDisplay() {
                 const offsetValue = parseFloat(document.getElementById('timing-offset').value);
                 document.getElementById('disguise-offset').textContent = 'O' + offsetValue.toFixed(2);
+            }
+            
+            updateClockCycleDisplay() {
+                const cycleValue = parseFloat(document.getElementById('timing-cycle').value);
+                document.getElementById('disguise-cycle').textContent = 'T' + cycleValue.toFixed(3);
             }
             
             adjustCycle(change) {
@@ -1721,8 +1768,9 @@
                 this.createFloatingElements();
                 this.updateInterval = setInterval(() => this.updateClock(), 1000);
                 
-                // オフセット値の初期表示
+                // 調整値の初期表示
                 app.updateClockOffsetDisplay();
+                app.updateClockCycleDisplay();
             }
             
             stop() {
