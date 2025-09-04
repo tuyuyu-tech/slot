@@ -251,8 +251,10 @@
             bottom: 15px;
             left: 0;
             right: 0;
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr auto;
+            align-items: center;
+            gap: 10px;
             padding: 0 25px;
             font-size: 11px;
             opacity: 0.3;
@@ -260,9 +262,37 @@
             user-select: none;
         }
         
-        .offset-value, .cycle-value {
+        .offset-value, .cycle-value, .vita-limit-value {
             font-family: 'Segoe UI', monospace;
             display: inline-block;
+        }
+        
+        .vita-limit-value {
+            cursor: pointer;
+            text-align: center;
+            min-width: 20px;
+        }
+        
+        .vita-limit-value:hover {
+            opacity: 0.6;
+        }
+        
+        .lock-icon {
+            cursor: pointer;
+            font-size: 12px;
+            justify-self: end;
+            padding: 2px;
+            border-radius: 3px;
+            transition: all 0.2s ease;
+        }
+        
+        .lock-icon:hover {
+            opacity: 0.6;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .lock-icon.locked {
+            color: rgba(255, 100, 100, 0.6);
         }
         
         /* 4分割タップエリア */
@@ -446,6 +476,16 @@
                         <button type="button" id="cycle-plus" style="width:18px; padding:1px; font-size:7px;">+</button>
                     </div>
                 </div>
+                <div style="margin-bottom:4px;">
+                    <div style="margin-bottom:2px;">ビタ回数: <span id="vita-limit-display">10回</span></div>
+                    <div style="display:flex; gap:1px; margin-bottom:2px;">
+                        <select id="vita-limit-select" style="flex:1; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:1px 2px; font-size:8px;">
+                            <option value="2">2回</option>
+                            <option value="10" selected>10回</option>
+                            <option value="999">無制限</option>
+                        </select>
+                    </div>
+                </div>
                 <div style="margin-top:4px;">
                     <div style="margin-bottom:2px;">検知閾値: <span id="threshold-display">30</span></div>
                     <div style="display:flex; gap:2px;">
@@ -531,7 +571,9 @@
                 <!-- 調整値表示 -->
                 <div class="adjustment-controls">
                     <span class="offset-value" id="disguise-offset">O0.00</span>
+                    <span class="vita-limit-value" id="disguise-vita-limit" onclick="app.toggleVitaLimitFromClock()">10</span>
                     <span class="cycle-value" id="disguise-cycle">T0.780</span>
+                    <span class="lock-icon" id="disguise-lock" onclick="app.toggleLockFromClock()">🔓</span>
                 </div>
                 </div>
             </div>
@@ -570,6 +612,9 @@
                 this.vitaCount = 0;        // 現在のビタ回数
                 this.maxVitaCount = 10;    // 最大ビタ回数
                 this.vitaStopped = false;  // 停止フラグ
+                
+                // 時計画面ロック
+                this.clockLocked = false;  // 調整ロック状態
                 
                 // 統計
                 this.frameCount = 0;
@@ -639,6 +684,9 @@
                 document.getElementById('disguiseBtn').onclick = () => this.toggleDisguise();
                 document.getElementById('clockBtn').onclick = () => this.toggleClock();
                 document.getElementById('machine-select').onchange = (e) => this.changeMachine(e.target.value);
+                
+                // ビタ回数制限選択
+                document.getElementById('vita-limit-select').onchange = () => this.updateVitaLimit();
                 
                 // 自動モード
                 document.getElementById('autoModeBtn').onclick = () => this.connectToBluetooth();
@@ -898,11 +946,13 @@
             }
             
             adjustOffsetFromClock(change) {
+                if (this.clockLocked) return;
                 this.adjustOffset(change);
                 this.updateClockDisplays();
             }
             
             adjustCycleFromClock(change) {
+                if (this.clockLocked) return;
                 this.adjustCycle(change);
                 this.updateClockDisplays();
             }
@@ -910,6 +960,7 @@
             updateClockDisplays() {
                 this.updateClockOffsetDisplay();
                 this.updateClockCycleDisplay();
+                this.updateClockVitaLimitDisplay();
             }
             
             updateClockOffsetDisplay() {
@@ -920,6 +971,58 @@
             updateClockCycleDisplay() {
                 const cycleValue = parseFloat(document.getElementById('timing-cycle').value);
                 document.getElementById('disguise-cycle').textContent = 'T' + cycleValue.toFixed(3);
+            }
+            
+            updateClockVitaLimitDisplay() {
+                let displayText;
+                if (this.maxVitaCount === 2) {
+                    displayText = '2';
+                } else if (this.maxVitaCount === 10) {
+                    displayText = '10';
+                } else if (this.maxVitaCount === 999) {
+                    displayText = '∞';
+                } else {
+                    displayText = this.maxVitaCount.toString();
+                }
+                document.getElementById('disguise-vita-limit').textContent = displayText;
+            }
+            
+            toggleVitaLimitFromClock() {
+                if (this.clockLocked) return;
+                
+                // 2 → 10 → ∞ → 2 のサイクル
+                if (this.maxVitaCount === 2) {
+                    this.maxVitaCount = 10;
+                } else if (this.maxVitaCount === 10) {
+                    this.maxVitaCount = 999;
+                } else {
+                    this.maxVitaCount = 2;
+                }
+                
+                // メイン画面の設定も同期
+                document.getElementById('vita-limit-select').value = this.maxVitaCount;
+                this.updateDisplays();
+                this.updateClockVitaLimitDisplay();
+                this.saveCurrentMachineSettings();
+                
+                console.log(`時計画面からビタ回数制限変更: ${this.maxVitaCount === 999 ? '無制限' : this.maxVitaCount + '回'}`);
+            }
+            
+            toggleLockFromClock() {
+                this.clockLocked = !this.clockLocked;
+                
+                const lockIcon = document.getElementById('disguise-lock');
+                const lockElement = document.querySelector('.lock-icon');
+                
+                if (this.clockLocked) {
+                    lockIcon.textContent = '🔒'; // ロック状態
+                    lockElement.classList.add('locked');
+                } else {
+                    lockIcon.textContent = '🔓'; // アンロック状態
+                    lockElement.classList.remove('locked');
+                }
+                
+                console.log(`時計画面ロック: ${this.clockLocked ? 'ロック' : 'アンロック'}`);
             }
             
             adjustCycle(change) {
@@ -977,6 +1080,24 @@
                     document.getElementById('detection-threshold').value;
                 document.getElementById('radius-display').textContent = 
                     document.getElementById('detection-radius').value;
+                document.getElementById('vita-limit-display').textContent = 
+                    this.getVitaLimitDisplayText();
+            }
+            
+            updateVitaLimit() {
+                const selectedValue = document.getElementById('vita-limit-select').value;
+                this.maxVitaCount = parseInt(selectedValue);
+                this.updateDisplays();
+                this.saveCurrentMachineSettings();
+                console.log(`ビタ回数制限更新: ${this.maxVitaCount === 999 ? '無制限' : this.maxVitaCount + '回'}`);
+            }
+            
+            getVitaLimitDisplayText() {
+                if (this.maxVitaCount === 999) {
+                    return '無制限';
+                } else {
+                    return this.maxVitaCount + '回';
+                }
             }
             
             toggleUI() {
@@ -1182,8 +1303,8 @@
                 // ビタ回数更新
                 this.vitaCount = cycleNumber;
                 
-                // 10回制限チェック
-                if (this.vitaCount > this.maxVitaCount) {
+                // ビタ回数制限チェック
+                if (this.maxVitaCount !== 999 && this.vitaCount > this.maxVitaCount) {
                     this.vitaStopped = true;
                     
                     // 停止通知（自動モード時は非表示）
@@ -1227,7 +1348,8 @@
             }
             
             updateVitaCountDisplay() {
-                document.getElementById('vita-count').textContent = `${this.vitaCount}/${this.maxVitaCount}`;
+                const maxText = this.maxVitaCount === 999 ? '∞' : this.maxVitaCount;
+                document.getElementById('vita-count').textContent = `${this.vitaCount}/${maxText}`;
             }
             
             captureVitaScreenshot(cycleNumber) {
@@ -1633,6 +1755,12 @@
                             document.getElementById('detection-radius').value = data.detectionRadius;
                         }
                         
+                        // ビタ回数制限復元
+                        if (data.maxVitaCount !== undefined) {
+                            this.maxVitaCount = data.maxVitaCount;
+                            document.getElementById('vita-limit-select').value = data.maxVitaCount;
+                        }
+                        
                         // スクリーンショット機能削除
                         
                         // ランプ位置復元
@@ -1664,6 +1792,7 @@
                         vitaCycle: this.vitaCycle,
                         detectionThresholdOffset: this.detectionThresholdOffset,
                         detectionRadius: this.detectionRadius,
+                        maxVitaCount: this.maxVitaCount,
                         lampPosition: this.lampPosition,
                         savedAt: new Date().toISOString()
                     };
@@ -1771,6 +1900,12 @@
                 // 調整値の初期表示
                 app.updateClockOffsetDisplay();
                 app.updateClockCycleDisplay();
+                app.updateClockVitaLimitDisplay();
+                
+                // ロック状態初期化
+                app.clockLocked = false;
+                document.getElementById('disguise-lock').textContent = '🔓';
+                document.querySelector('.lock-icon').classList.remove('locked');
             }
             
             stop() {
