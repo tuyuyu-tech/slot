@@ -303,6 +303,8 @@
             transition: all 0.2s ease;
             min-width: 20px;
             text-align: center;
+            z-index: 1002; /* タップエリアより高い優先度 */
+            position: relative;
         }
         
         .lock-icon:hover {
@@ -339,11 +341,15 @@
         .cycle-tap-top-right {
             right: 0;
             top: 0;
+            bottom: 60%; /* 下部を除外してロックアイコンとの重複を回避 */
+            height: auto;
         }
         
         .cycle-tap-bottom-right {
             right: 0;
-            bottom: 0;
+            bottom: 40px; /* ロックアイコン領域を除外 */
+            top: 60%;
+            height: auto;
         }
         
         .clock-disguise .offset-tap-top-left,
