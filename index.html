@@ -565,7 +565,7 @@
         </div>
         
         <div id="status">
-            <div>v2.15</div>
+            <div>v2.15.1</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -778,7 +778,8 @@
                         video: {
                             facingMode: 'environment', // バックカメラ優先
                             width: { ideal: 1280 },
-                            height: { ideal: 720 }
+                            height: { ideal: 720 },
+                            frameRate: { ideal: 60, min: 30 } // iPhone15対応高FPS
                         }
                     };
                     
@@ -2128,40 +2129,16 @@
             onReelMotionDetected(intensity) {
                 console.log(`リール動き検出! 強度: ${intensity.toFixed(1)}`);
                 
-                // デバッグ情報をUIに表示（iPhone対応）
-                this.updateStatus(`🎰 動き検出! 強度: ${intensity.toFixed(1)}`);
+                // 既存のアラート形式でポップアップ表示
+                const alert = document.getElementById('vita-alert');
+                alert.textContent = `🎰 リール動き検出! 強度: ${intensity.toFixed(1)}`;
+                alert.style.background = 'rgba(255,165,0,0.9)';
+                alert.style.display = 'block';
                 
-                // 視覚的フィードバック
-                const marker = document.createElement('div');
-                marker.style.cssText = `
-                    position: fixed;
-                    left: ${this.canvas.offsetLeft + this.lampPosition.x}px;
-                    top: ${this.canvas.offsetTop + this.lampPosition.y}px;
-                    width: 40px;
-                    height: 40px;
-                    border: 3px solid #ff0000;
-                    border-radius: 50%;
-                    transform: translate(-50%, -50%);
-                    pointer-events: none;
-                    z-index: 10000;
-                    background: rgba(255,0,0,0.2);
-                `;
-                
-                // body直接追加でより確実に表示
-                document.body.appendChild(marker);
-                
-                // アニメーションを手動で追加
-                marker.style.animation = 'none';
+                // 2秒後に非表示
                 setTimeout(() => {
-                    marker.style.animation = 'pulse 0.5s ease-out';
-                }, 10);
-                
-                // 1.5秒後に削除
-                setTimeout(() => {
-                    if (marker.parentNode) {
-                        marker.parentNode.removeChild(marker);
-                    }
-                }, 1500);
+                    alert.style.display = 'none';
+                }, 2000);
             }
             
             updateStatus(message) {
