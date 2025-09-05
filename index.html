@@ -575,7 +575,7 @@
         </div>
         
         <div id="status">
-            <div>v2.18.10</div>
+            <div>v2.18.11</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -2292,6 +2292,11 @@
                 setTimeout(() => {
                     alert.style.display = 'none';
                 }, 2000);
+            }
+            
+            executeVitaTiming() {
+                // 通常自動モードと同じビタタイミング処理を実行
+                this.showVitaAlert(this.vitaCount + 1);
             }
             
             updateStatus(message) {
