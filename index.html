@@ -575,17 +575,13 @@
         </div>
         
         <div id="status">
-            <div>v2.18.6</div>
+            <div>v2.18.7</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
             <div>ベースライン: <span id="baseline">-</span></div>
             <div>次回ビタ: <span id="next-vita">-</span></div>
             <div>ビタ回数: <span id="vita-count">0/10</span></div>
-            <div style="margin-top:8px; padding:4px; background:#111; border:1px solid #ff0; border-radius:3px;">
-                <div style="font-size:8px; color:#ff0; margin-bottom:2px;">🔍 デバッグログ</div>
-                <div style="font-size:7px; color:#ff0; max-height:100px; overflow-y:auto; line-height:1.3;" id="debug-log">待機中...</div>
-            </div>
         </div>
         
         <div id="detection-result">
@@ -901,12 +897,7 @@
             }
             
             onCanvasClick(event) {
-                this.debugLog(`Canvas clicked, setupBtn active: ${document.getElementById('setupBtn').classList.contains('active')}`);
-                this.debugLog(`Motion auto mode: ${this.isMotionAutoMode}`);
-                this.debugLog(`Auto mode: ${this.isAutoMode}`);
-                
-                // 自動モード中（通常・動き両方）は setupBtn が active でなくてもランプ位置設定を許可
-                if (!document.getElementById('setupBtn').classList.contains('active') && !this.isAutoMode && !this.isMotionAutoMode) return;
+                if (!document.getElementById('setupBtn').classList.contains('active')) return;
                 
                 const rect = this.canvas.getBoundingClientRect();
                 const scaleX = this.canvas.width / rect.width;
@@ -1726,21 +1717,10 @@
             }
             
             hideUIForMotionAutoMode() {
-                // 動き自動モード用：通常の自動モードと同じUI非表示、デバッグログのみ表示維持
+                // 動き自動モード用：通常の自動モードと同じUI完全非表示
                 document.getElementById('controls').style.display = 'none';
+                document.getElementById('status').style.display = 'none';
                 this.uiVisible = false;
-                
-                // ステータスの他の要素を非表示にしてデバッグログだけ残す
-                const statusChildren = document.getElementById('status').children;
-                for (let i = 0; i < statusChildren.length; i++) {
-                    const child = statusChildren[i];
-                    // デバッグログエリアは表示維持
-                    if (child.querySelector && child.querySelector('#debug-log')) {
-                        child.style.display = 'block';
-                    } else {
-                        child.style.display = 'none';
-                    }
-                }
                 
                 // 自動モードでUI非表示中であることを示すフラグ
                 this.isAutoModeUIHidden = true;
@@ -1873,12 +1853,6 @@
                     if (!this.lampPosition) {
                         this.enterSetupMode();
                         this.updateStatus('動き検知自動モード - ランプ位置設定中...');
-                        
-                        // デバッグ情報
-                        this.debugLog('動き自動モード: ランプ位置設定モード開始');
-                        this.debugLog(`Canvas display: ${this.canvas.style.display}`);
-                        this.debugLog(`Canvas visibility: ${this.canvas.style.visibility}`);
-                        this.debugLog(`setupBtn active: ${document.getElementById('setupBtn').classList.contains('active')}`);
                         
                         const alert = document.getElementById('vita-alert');
                         alert.style.display = 'block';
@@ -2317,11 +2291,8 @@
                 
                 // リール動き検知自動モード時はビタタイミングで自動押下
                 if (this.isMotionAutoMode && this.bluetoothCharacteristic) {
-                    this.debugLog('動き検知自動モード: executeVitaTiming実行');
                     this.executeVitaTiming();
                     return; // 自動モード時はアラート表示をスキップ
-                } else if (this.isMotionAutoMode && !this.bluetoothCharacteristic) {
-                    this.debugLog('動き検知自動モード: ESP32未接続');
                 }
                 
                 // 通常モード時は既存のアラート形式でポップアップ表示
@@ -2340,26 +2311,6 @@
                 document.getElementById('current-status').textContent = message;
             }
             
-            debugLog(message) {
-                const debugDiv = document.getElementById('debug-log');
-                if (debugDiv) {
-                    // 初回は「待機中...」をクリア
-                    if (debugDiv.textContent === '待機中...') {
-                        debugDiv.innerHTML = '';
-                    }
-                    
-                    const now = new Date().toLocaleTimeString();
-                    debugDiv.innerHTML += `${now}: ${message}<br>`;
-                    debugDiv.scrollTop = debugDiv.scrollHeight;
-                    
-                    // 8行以上は古いのを削除
-                    const lines = debugDiv.innerHTML.split('<br>');
-                    if (lines.length > 8) {
-                        debugDiv.innerHTML = lines.slice(-8).join('<br>');
-                    }
-                }
-                console.log(message); // コンソールにも出力
-            }
         }
         
         // PWA対応
