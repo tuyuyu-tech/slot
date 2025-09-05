@@ -575,7 +575,7 @@
         </div>
         
         <div id="status">
-            <div>v2.18.11</div>
+            <div>v2.18.12</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -696,6 +696,7 @@
                 this.motionTestActive = false; // テスト状態
                 this.motionTestInterval = null; // テストインターバル
                 this.motionDetectionState = 'waiting'; // 'waiting' -> 'started' -> 'stopping'
+                this.stopFrameCount = 0;       // 停止フレーム連続カウンター
                 
                 // カメラFPS設定（60fps固定）
                 this.cameraFPS = 60;
@@ -2174,6 +2175,7 @@
             clearMotionTest() {
                 this.frameHistory = [];
                 this.motionDetectionState = 'waiting'; // 状態リセット
+                this.stopFrameCount = 0; // 停止フレームカウンターリセット
                 document.getElementById('motion-intensity').textContent = '0';
                 console.log('リール動き検出データクリア');
             }
@@ -2225,10 +2227,16 @@
                             this.onReelMotionDetected(motionIntensity);
                         }
                     } else if (this.motionDetectionState === 'started') {
-                        // 始動済み状態：停止閾値を下回ったら停止待ち状態に
+                        // 始動済み状態：停止閾値を下回ったら連続フレームカウント
                         if (motionIntensity < this.stopThreshold) {
-                            this.motionDetectionState = 'waiting';
-                            console.log(`リール停止検知: 強度${motionIntensity.toFixed(1)} < 停止閾値${this.stopThreshold}`);
+                            this.stopFrameCount++;
+                            if (this.stopFrameCount >= 10) {
+                                this.motionDetectionState = 'waiting';
+                                this.stopFrameCount = 0;
+                                console.log(`リール停止検知: 10フレーム連続で停止閾値未満`);
+                            }
+                        } else {
+                            this.stopFrameCount = 0; // 閾値を上回ったらカウンターリセット
                         }
                     }
                 }
@@ -2295,8 +2303,8 @@
             }
             
             executeVitaTiming() {
-                // 通常自動モードと同じビタタイミング処理を実行
-                this.showVitaAlert(this.vitaCount + 1);
+                // リール始動タイミングとして扱い、オフセット・周期に基づくスケジュール開始
+                this.startVitaTiming();
             }
             
             updateStatus(message) {
