@@ -575,7 +575,7 @@
         </div>
         
         <div id="status">
-            <div>v2.18.12</div>
+            <div>v2.18.13</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -2286,7 +2286,7 @@
                 
                 // リール動き検知自動モード時はビタタイミングで自動押下
                 if (this.isMotionAutoMode && this.bluetoothCharacteristic) {
-                    this.executeVitaTiming();
+                    this.startVitaTiming();
                     return; // 自動モード時はアラート表示をスキップ
                 }
                 
@@ -2300,11 +2300,6 @@
                 setTimeout(() => {
                     alert.style.display = 'none';
                 }, 2000);
-            }
-            
-            executeVitaTiming() {
-                // リール始動タイミングとして扱い、オフセット・周期に基づくスケジュール開始
-                this.startVitaTiming();
             }
             
             updateStatus(message) {
