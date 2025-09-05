@@ -560,6 +560,7 @@
                         <input type="range" id="stop-threshold-slider" min="1" max="50" value="10" style="width:100%; height:12px;">
                     </div>
                     <div style="font-size:7px; color:#888;">動き強度: <span id="motion-intensity">0</span></div>
+                    <div style="font-size:6px; color:#ff0; margin-top:2px; max-height:60px; overflow-y:auto;" id="debug-log"></div>
                 </div>
                 
                 <!-- カメラFPS設定 -->
@@ -575,7 +576,7 @@
         </div>
         
         <div id="status">
-            <div>v2.18.1</div>
+            <div>v2.18.2</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -897,9 +898,9 @@
             }
             
             onCanvasClick(event) {
-                console.log('Canvas clicked, setupBtn active:', document.getElementById('setupBtn').classList.contains('active'));
-                console.log('Motion auto mode:', this.isMotionAutoMode);
-                console.log('Auto mode:', this.isAutoMode);
+                this.debugLog(`Canvas clicked, setupBtn active: ${document.getElementById('setupBtn').classList.contains('active')}`);
+                this.debugLog(`Motion auto mode: ${this.isMotionAutoMode}`);
+                this.debugLog(`Auto mode: ${this.isAutoMode}`);
                 
                 if (!document.getElementById('setupBtn').classList.contains('active')) return;
                 
@@ -1849,10 +1850,10 @@
                         this.updateStatus('動き検知自動モード - ランプ位置設定中...');
                         
                         // デバッグ情報
-                        console.log('動き自動モード: ランプ位置設定モード開始');
-                        console.log('Canvas display:', this.canvas.style.display);
-                        console.log('Canvas visibility:', this.canvas.style.visibility);
-                        console.log('setupBtn active:', document.getElementById('setupBtn').classList.contains('active'));
+                        this.debugLog('動き自動モード: ランプ位置設定モード開始');
+                        this.debugLog(`Canvas display: ${this.canvas.style.display}`);
+                        this.debugLog(`Canvas visibility: ${this.canvas.style.visibility}`);
+                        this.debugLog(`setupBtn active: ${document.getElementById('setupBtn').classList.contains('active')}`);
                         
                         const alert = document.getElementById('vita-alert');
                         alert.style.display = 'block';
@@ -2291,11 +2292,11 @@
                 
                 // リール動き検知自動モード時はビタタイミングで自動押下
                 if (this.isMotionAutoMode && this.bluetoothCharacteristic) {
-                    console.log('動き検知自動モード: executeVitaTiming実行');
+                    this.debugLog('動き検知自動モード: executeVitaTiming実行');
                     this.executeVitaTiming();
                     return; // 自動モード時はアラート表示をスキップ
                 } else if (this.isMotionAutoMode && !this.bluetoothCharacteristic) {
-                    console.log('動き検知自動モード: ESP32未接続');
+                    this.debugLog('動き検知自動モード: ESP32未接続');
                 }
                 
                 // 通常モード時は既存のアラート形式でポップアップ表示
@@ -2312,6 +2313,22 @@
             
             updateStatus(message) {
                 document.getElementById('current-status').textContent = message;
+            }
+            
+            debugLog(message) {
+                const debugDiv = document.getElementById('debug-log');
+                if (debugDiv) {
+                    const now = new Date().toLocaleTimeString();
+                    debugDiv.innerHTML += `${now}: ${message}<br>`;
+                    debugDiv.scrollTop = debugDiv.scrollHeight;
+                    
+                    // 10行以上は古いのを削除
+                    const lines = debugDiv.innerHTML.split('<br>');
+                    if (lines.length > 10) {
+                        debugDiv.innerHTML = lines.slice(-10).join('<br>');
+                    }
+                }
+                console.log(message); // コンソールにも出力
             }
         }
         
