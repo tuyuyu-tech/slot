@@ -905,7 +905,8 @@
                 this.debugLog(`Motion auto mode: ${this.isMotionAutoMode}`);
                 this.debugLog(`Auto mode: ${this.isAutoMode}`);
                 
-                if (!document.getElementById('setupBtn').classList.contains('active')) return;
+                // 動き自動モード中は setupBtn が active でなくてもランプ位置設定を許可
+                if (!document.getElementById('setupBtn').classList.contains('active') && !this.isMotionAutoMode) return;
                 
                 const rect = this.canvas.getBoundingClientRect();
                 const scaleX = this.canvas.width / rect.width;
@@ -1725,8 +1726,17 @@
             }
             
             hideUIForMotionAutoMode() {
-                // 動き自動モード用：コントロールパネルのみ非表示、デバッグログは表示維持
-                document.getElementById('controls').style.display = 'none';
+                // 動き自動モード用：setupBtn以外のコントロールを非表示、デバッグログは表示維持
+                const controls = document.getElementById('controls');
+                const buttons = controls.querySelectorAll('button');
+                
+                // setupBtn以外のボタンを非表示
+                buttons.forEach(btn => {
+                    if (btn.id !== 'setupBtn') {
+                        btn.style.display = 'none';
+                    }
+                });
+                
                 this.uiVisible = false;
                 
                 // ステータスの他の要素を非表示にしてデバッグログだけ残す
