@@ -538,6 +538,24 @@
                         <button type="button" id="radius-plus" style="width:20px; padding:2px; font-size:8px;">+</button>
                     </div>
                 </div>
+                
+                <!-- リール動き検出テスト -->
+                <div style="margin-top:8px; padding:4px; border:1px solid #555; border-radius:3px; background:#2a2a2a;">
+                    <div style="font-size:8px; color:#ccc; margin-bottom:3px;">🎰 リール動き検出テスト</div>
+                    <div style="display:flex; gap:2px; margin-bottom:3px;">
+                        <button type="button" id="motion-test-btn" style="flex:1; padding:2px; font-size:7px; background:#444;">テスト開始</button>
+                        <button type="button" id="motion-clear-btn" style="padding:2px 4px; font-size:7px; background:#666;">クリア</button>
+                    </div>
+                    <div style="margin-bottom:2px;">
+                        <div style="font-size:7px; margin-bottom:1px;">平均フレーム数: <span id="avg-frames-display">3</span></div>
+                        <input type="range" id="avg-frames-slider" min="1" max="5" value="3" style="width:100%; height:12px;">
+                    </div>
+                    <div style="margin-bottom:2px;">
+                        <div style="font-size:7px; margin-bottom:1px;">動き闾値: <span id="motion-threshold-display">30</span></div>
+                        <input type="range" id="motion-threshold-slider" min="5" max="100" value="30" style="width:100%; height:12px;">
+                    </div>
+                    <div style="font-size:7px; color:#888;">動き強度: <span id="motion-intensity">0</span></div>
+                </div>
             </div>
             <div class="info">
                 解像度: <span id="resolution">-</span><br>
@@ -659,6 +677,13 @@
                 // 時計画面ロック
                 this.clockLocked = true;   // 調整ロック状態（初期はロック）
                 
+                // リール動き検出
+                this.frameHistory = [];        // 最大5フレーム保存
+                this.avgFrameCount = 3;        // 平均フレーム数（1-5）
+                this.motionThreshold = 30;     // 動き検出闾値
+                this.motionTestActive = false; // テスト状態
+                this.motionTestInterval = null; // テストインターバル
+                
                 // 統計
                 this.frameCount = 0;
                 this.lastFpsUpdate = Date.now();
@@ -730,6 +755,12 @@
                 
                 // ビタ回数制限選択
                 document.getElementById('vita-limit-select').onchange = () => this.updateVitaLimit();
+                
+                // リール動き検出テスト
+                document.getElementById('motion-test-btn').onclick = () => this.toggleMotionTest();
+                document.getElementById('motion-clear-btn').onclick = () => this.clearMotionTest();
+                document.getElementById('avg-frames-slider').oninput = () => this.updateMotionSettings();
+                document.getElementById('motion-threshold-slider').oninput = () => this.updateMotionSettings();
                 
                 // 自動モード
                 document.getElementById('autoModeBtn').onclick = () => this.connectToBluetooth();
@@ -1913,6 +1944,162 @@
                         alert.parentNode.removeChild(alert);
                     }
                 }, 2000);
+            }
+            
+            // リール動き検出機能
+            toggleMotionTest() {
+                if (this.motionTestActive) {
+                    this.stopMotionTest();
+                } else {
+                    this.startMotionTest();
+                }
+            }
+            
+            startMotionTest() {
+                if (!this.stream) {
+                    alert('カメラを開始してください');
+                    return;
+                }
+                
+                this.motionTestActive = true;
+                this.frameHistory = []; // 履歴クリア
+                document.getElementById('motion-test-btn').textContent = '停止';
+                document.getElementById('motion-test-btn').style.background = '#dc3545';
+                
+                // 30fpsで動き検出テスト
+                this.motionTestInterval = setInterval(() => {
+                    this.detectReelMotion();
+                }, 33); // 約30fps
+                
+                console.log('リール動き検出テスト開始');
+            }
+            
+            stopMotionTest() {
+                this.motionTestActive = false;
+                if (this.motionTestInterval) {
+                    clearInterval(this.motionTestInterval);
+                    this.motionTestInterval = null;
+                }
+                
+                document.getElementById('motion-test-btn').textContent = 'テスト開始';
+                document.getElementById('motion-test-btn').style.background = '#444';
+                
+                console.log('リール動き検出テスト停止');
+            }
+            
+            clearMotionTest() {
+                this.frameHistory = [];
+                document.getElementById('motion-intensity').textContent = '0';
+                console.log('リール動き検出データクリア');
+            }
+            
+            updateMotionSettings() {
+                this.avgFrameCount = parseInt(document.getElementById('avg-frames-slider').value);
+                this.motionThreshold = parseInt(document.getElementById('motion-threshold-slider').value);
+                
+                document.getElementById('avg-frames-display').textContent = this.avgFrameCount;
+                document.getElementById('motion-threshold-display').textContent = this.motionThreshold;
+                
+                console.log(`動き検出設定更新: 平均${this.avgFrameCount}フレーム, 闾値${this.motionThreshold}`);
+            }
+            
+            detectReelMotion() {
+                if (!this.stream || !this.lampPosition) return;
+                
+                // 現在フレームを取得
+                this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                const currentFrameData = this.getDetectionAreaPixels();
+                
+                // フレーム履歴に追加
+                this.frameHistory.push(currentFrameData);
+                
+                // 最大5フレームに制限
+                if (this.frameHistory.length > 5) {
+                    this.frameHistory.shift();
+                }
+                
+                // 指定数のフレームがたまったら動き検出
+                if (this.frameHistory.length >= this.avgFrameCount) {
+                    const avgFrame = this.calculateAverageFrame(this.avgFrameCount);
+                    const motionIntensity = this.calculateMotionIntensity(currentFrameData, avgFrame);
+                    
+                    // リアルタイム表示更新
+                    document.getElementById('motion-intensity').textContent = motionIntensity.toFixed(1);
+                    
+                    // 始動判定
+                    if (motionIntensity > this.motionThreshold) {
+                        this.onReelMotionDetected(motionIntensity);
+                    }
+                }
+            }
+            
+            getDetectionAreaPixels() {
+                const imageData = this.ctx.getImageData(
+                    this.lampPosition.x - this.detectionRadius,
+                    this.lampPosition.y - this.detectionRadius,
+                    this.detectionRadius * 2,
+                    this.detectionRadius * 2
+                );
+                return imageData.data;
+            }
+            
+            calculateAverageFrame(frameCount) {
+                const recentFrames = this.frameHistory.slice(-frameCount);
+                const pixelCount = recentFrames[0].length;
+                const avgFrame = new Uint8ClampedArray(pixelCount);
+                
+                for (let i = 0; i < pixelCount; i++) {
+                    let sum = 0;
+                    for (let j = 0; j < recentFrames.length; j++) {
+                        sum += recentFrames[j][i];
+                    }
+                    avgFrame[i] = sum / recentFrames.length;
+                }
+                
+                return avgFrame;
+            }
+            
+            calculateMotionIntensity(currentFrame, avgFrame) {
+                let totalDiff = 0;
+                const pixelCount = currentFrame.length;
+                
+                for (let i = 0; i < pixelCount; i += 4) { // RGBAのため4バイトおき
+                    const currentGray = (currentFrame[i] + currentFrame[i+1] + currentFrame[i+2]) / 3;
+                    const avgGray = (avgFrame[i] + avgFrame[i+1] + avgFrame[i+2]) / 3;
+                    totalDiff += Math.abs(currentGray - avgGray);
+                }
+                
+                return totalDiff / (pixelCount / 4); // ピクセル数で平均化
+            }
+            
+            onReelMotionDetected(intensity) {
+                console.log(`リール動き検出! 強度: ${intensity.toFixed(1)}`);
+                
+                // 視覚的フィードバック
+                const marker = document.createElement('div');
+                marker.style.cssText = `
+                    position: absolute;
+                    left: ${this.lampPosition.x}px;
+                    top: ${this.lampPosition.y}px;
+                    width: 40px;
+                    height: 40px;
+                    border: 3px solid #ff0000;
+                    border-radius: 50%;
+                    transform: translate(-50%, -50%);
+                    pointer-events: none;
+                    animation: pulse 0.5s ease-out;
+                    z-index: 1000;
+                `;
+                
+                const canvasContainer = this.canvas.parentElement;
+                canvasContainer.appendChild(marker);
+                
+                // 1秒後に削除
+                setTimeout(() => {
+                    if (marker.parentNode) {
+                        marker.parentNode.removeChild(marker);
+                    }
+                }, 1000);
             }
             
             updateStatus(message) {
