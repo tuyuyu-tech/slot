@@ -559,7 +559,8 @@
             </div>
             <div class="info">
                 解像度: <span id="resolution">-</span><br>
-                FPS: <span id="fps">-</span>
+                描画FPS: <span id="fps">-</span><br>
+                カメラFPS: <span id="camera-fps">-</span>
             </div>
         </div>
         
@@ -785,6 +786,9 @@
                     this.video.srcObject = this.stream;
                     
                     this.video.onloadedmetadata = () => {
+                        // カメラの実際のFPSを取得・表示
+                        this.updateCameraFPS();
+                        
                         // キャンバスサイズ調整
                         const aspectRatio = this.video.videoWidth / this.video.videoHeight;
                         const maxWidth = window.innerWidth * 0.9;
@@ -1716,6 +1720,29 @@
                 } catch (error) {
                     console.error('Bluetooth接続エラー:', error);
                     throw error;
+                }
+            }
+            
+            updateCameraFPS() {
+                try {
+                    const videoTrack = this.stream.getVideoTracks()[0];
+                    const settings = videoTrack.getSettings();
+                    const capabilities = videoTrack.getCapabilities();
+                    
+                    console.log('カメラ設定情報:', settings);
+                    console.log('カメラ対応情報:', capabilities);
+                    
+                    const fps = settings.frameRate || 'Unknown';
+                    document.getElementById('camera-fps').textContent = fps;
+                    
+                    // 詳細情報をコンソールに出力
+                    console.log('実際のカメラFPS:', fps);
+                    console.log('対応FPS範囲:', capabilities.frameRate);
+                    console.log('実際の解像度:', settings.width + 'x' + settings.height);
+                    
+                } catch (error) {
+                    console.error('カメラFPS取得エラー:', error);
+                    document.getElementById('camera-fps').textContent = 'Error';
                 }
             }
             

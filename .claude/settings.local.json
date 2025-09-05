@@ -4,7 +4,10 @@
       "Read(/C:\\/**)",
       "Read(/C:\\Users/**)",
       "Read(/C:\\Users\\User\\Downloads/**)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "WebSearch",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
