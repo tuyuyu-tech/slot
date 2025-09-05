@@ -571,7 +571,7 @@
         </div>
         
         <div id="status">
-            <div>v2.17</div>
+            <div>v2.17.1</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -1834,7 +1834,9 @@
                     
                     // 自動でランプ位置設定モードに入る
                     if (!this.lampPosition) {
+                        this.enterSetupMode();
                         this.updateStatus('動き検知自動モード - ランプ位置設定中...');
+                        
                         const alert = document.getElementById('vita-alert');
                         alert.style.display = 'block';
                         alert.style.background = 'rgba(40,167,69,0.9)';
