@@ -559,12 +559,7 @@
                 
                 <!-- カメラFPS設定 -->
                 <div style="margin-top:4px; padding:4px; border:1px solid #555; border-radius:3px; background:#2a2a2a;">
-                    <div style="font-size:8px; color:#ccc; margin-bottom:3px;">📹 カメラFPS設定</div>
-                    <div style="display:flex; gap:2px;">
-                        <button type="button" id="fps-60-btn" style="flex:1; padding:2px; font-size:7px; background:#28a745;">60fps</button>
-                        <button type="button" id="fps-120-btn" style="flex:1; padding:2px; font-size:7px; background:#444;">120fps</button>
-                        <button type="button" id="fps-240-btn" style="flex:1; padding:2px; font-size:7px; background:#444;">240fps</button>
-                    </div>
+                    <div style="font-size:8px; color:#ccc; margin-bottom:2px;">📹 カメラFPS: 60fps固定</div>
                 </div>
             </div>
             <div class="info">
@@ -575,7 +570,7 @@
         </div>
         
         <div id="status">
-            <div>v2.16</div>
+            <div>v2.16.1</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -695,8 +690,8 @@
                 this.motionTestActive = false; // テスト状態
                 this.motionTestInterval = null; // テストインターバル
                 
-                // カメラFPS設定
-                this.cameraFPS = 60;           // 現在のFPS設定（60/120/240）
+                // カメラFPS設定（60fps固定）
+                this.cameraFPS = 60;
                 
                 // 統計
                 this.frameCount = 0;
@@ -776,10 +771,7 @@
                 document.getElementById('avg-frames-slider').oninput = () => this.updateMotionSettings();
                 document.getElementById('motion-threshold-slider').oninput = () => this.updateMotionSettings();
                 
-                // カメラFPS設定
-                document.getElementById('fps-60-btn').onclick = () => this.setCameraFPS(60);
-                document.getElementById('fps-120-btn').onclick = () => this.setCameraFPS(120);
-                document.getElementById('fps-240-btn').onclick = () => this.setCameraFPS(240);
+                // カメラFPS設定（60fps固定）
                 
                 // 自動モード
                 document.getElementById('autoModeBtn').onclick = () => this.connectToBluetooth();
@@ -1919,11 +1911,7 @@
                             document.getElementById('motion-threshold-display').textContent = data.motionThreshold;
                         }
                         
-                        // カメラFPS設定復元
-                        if (data.cameraFPS !== undefined) {
-                            this.cameraFPS = data.cameraFPS;
-                            this.updateFpsButtons();
-                        }
+                        // カメラFPS設定（60fps固定なので復元不要）
                         
                         // スクリーンショット機能削除
                         
@@ -1959,7 +1947,6 @@
                         maxVitaCount: this.maxVitaCount,
                         avgFrameCount: this.avgFrameCount,
                         motionThreshold: this.motionThreshold,
-                        cameraFPS: this.cameraFPS,
                         lampPosition: this.lampPosition,
                         savedAt: new Date().toISOString()
                     };
@@ -2099,44 +2086,6 @@
                 console.log(`動き検出設定更新: 平均${this.avgFrameCount}フレーム, 閾値${this.motionThreshold}`);
             }
             
-            setCameraFPS(fps) {
-                this.cameraFPS = fps;
-                this.updateFpsButtons();
-                
-                // 設定保存
-                this.saveMachineSettings(this.currentMachine);
-                
-                // カメラが既に起動している場合は再起動
-                if (this.stream) {
-                    this.updateStatus(`カメラを${fps}fpsで再起動中...`);
-                    
-                    // 現在のストリームを停止
-                    this.stream.getTracks().forEach(track => track.stop());
-                    
-                    // 少し待ってから再起動
-                    setTimeout(async () => {
-                        await this.startCamera();
-                        this.updateStatus('カメラ再起動完了');
-                    }, 500);
-                } else {
-                    this.updateStatus(`カメラFPSを${fps}fpsに設定`);
-                }
-                
-                console.log(`カメラFPS設定: ${fps}fps`);
-            }
-            
-            updateFpsButtons() {
-                // 全てのボタンをデフォルト色に
-                document.getElementById('fps-60-btn').style.background = '#444';
-                document.getElementById('fps-120-btn').style.background = '#444';
-                document.getElementById('fps-240-btn').style.background = '#444';
-                
-                // 現在選択中のボタンを緑色に
-                const activeBtn = document.getElementById(`fps-${this.cameraFPS}-btn`);
-                if (activeBtn) {
-                    activeBtn.style.background = '#28a745';
-                }
-            }
             
             detectReelMotion() {
                 if (!this.stream || !this.lampPosition) return;
