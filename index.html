@@ -565,7 +565,7 @@
         </div>
         
         <div id="status">
-            <div>v2.14.7</div>
+            <div>v2.15</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -1725,20 +1725,46 @@
             
             updateCameraFPS() {
                 try {
+                    if (!this.stream) {
+                        document.getElementById('camera-fps').textContent = 'No Stream';
+                        return;
+                    }
+                    
                     const videoTrack = this.stream.getVideoTracks()[0];
+                    if (!videoTrack) {
+                        document.getElementById('camera-fps').textContent = 'No Track';
+                        return;
+                    }
+                    
                     const settings = videoTrack.getSettings();
-                    const capabilities = videoTrack.getCapabilities();
-                    
                     console.log('カメラ設定情報:', settings);
-                    console.log('カメラ対応情報:', capabilities);
                     
-                    const fps = settings.frameRate || 'Unknown';
+                    // iPhone用のFPS取得（複数の方法を試す）
+                    let fps = 'Auto';
+                    if (settings.frameRate) {
+                        fps = settings.frameRate;
+                    } else if (settings.width && settings.height) {
+                        // 解像度から推測（iPhoneの一般的な値）
+                        if (settings.width >= 1920) fps = '30-60';
+                        else if (settings.width >= 1280) fps = '30';
+                        else fps = '30';
+                    }
+                    
                     document.getElementById('camera-fps').textContent = fps;
                     
-                    // 詳細情報をコンソールに出力
-                    console.log('実際のカメラFPS:', fps);
-                    console.log('対応FPS範囲:', capabilities.frameRate);
-                    console.log('実際の解像度:', settings.width + 'x' + settings.height);
+                    // iPhoneでもステータス表示でFPS情報を確認可能に
+                    const resolution = `${settings.width || '?'}x${settings.height || '?'}`;
+                    console.log(`カメラFPS: ${fps}, 解像度: ${resolution}`);
+                    
+                    // capabilitiesの取得を試す（対応していない場合もある）
+                    try {
+                        const capabilities = videoTrack.getCapabilities();
+                        if (capabilities && capabilities.frameRate) {
+                            console.log('対応FPS範囲:', capabilities.frameRate);
+                        }
+                    } catch (capError) {
+                        console.log('capabilities未対応:', capError.message);
+                    }
                     
                 } catch (error) {
                     console.error('カメラFPS取得エラー:', error);
@@ -2102,31 +2128,40 @@
             onReelMotionDetected(intensity) {
                 console.log(`リール動き検出! 強度: ${intensity.toFixed(1)}`);
                 
+                // デバッグ情報をUIに表示（iPhone対応）
+                this.updateStatus(`🎰 動き検出! 強度: ${intensity.toFixed(1)}`);
+                
                 // 視覚的フィードバック
                 const marker = document.createElement('div');
                 marker.style.cssText = `
-                    position: absolute;
-                    left: ${this.lampPosition.x}px;
-                    top: ${this.lampPosition.y}px;
+                    position: fixed;
+                    left: ${this.canvas.offsetLeft + this.lampPosition.x}px;
+                    top: ${this.canvas.offsetTop + this.lampPosition.y}px;
                     width: 40px;
                     height: 40px;
                     border: 3px solid #ff0000;
                     border-radius: 50%;
                     transform: translate(-50%, -50%);
                     pointer-events: none;
-                    animation: pulse 0.5s ease-out;
-                    z-index: 1000;
+                    z-index: 10000;
+                    background: rgba(255,0,0,0.2);
                 `;
                 
-                const canvasContainer = this.canvas.parentElement;
-                canvasContainer.appendChild(marker);
+                // body直接追加でより確実に表示
+                document.body.appendChild(marker);
                 
-                // 1秒後に削除
+                // アニメーションを手動で追加
+                marker.style.animation = 'none';
+                setTimeout(() => {
+                    marker.style.animation = 'pulse 0.5s ease-out';
+                }, 10);
+                
+                // 1.5秒後に削除
                 setTimeout(() => {
                     if (marker.parentNode) {
                         marker.parentNode.removeChild(marker);
                     }
-                }, 1000);
+                }, 1500);
             }
             
             updateStatus(message) {
