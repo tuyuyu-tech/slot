@@ -575,7 +575,7 @@
         </div>
         
         <div id="status">
-            <div>v2.18.3</div>
+            <div>v2.18.4</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -949,8 +949,8 @@
                 
                 // 動き検知自動モード時は動き検出開始
                 if (this.isMotionAutoMode) {
-                    // ランプ位置設定完了時にUI非表示
-                    this.hideUIForAutoMode();
+                    // ランプ位置設定完了時にUI非表示（動き自動専用）
+                    this.hideUIForMotionAutoMode();
                     
                     setTimeout(() => {
                         this.toggleMotionTest(); // 動き検出開始
@@ -1724,6 +1724,27 @@
                 this.isAutoModeUIHidden = true;
             }
             
+            hideUIForMotionAutoMode() {
+                // 動き自動モード用：コントロールパネルのみ非表示、デバッグログは表示維持
+                document.getElementById('controls').style.display = 'none';
+                this.uiVisible = false;
+                
+                // ステータスの他の要素を非表示にしてデバッグログだけ残す
+                const statusChildren = document.getElementById('status').children;
+                for (let i = 0; i < statusChildren.length; i++) {
+                    const child = statusChildren[i];
+                    // デバッグログエリアは表示維持
+                    if (child.querySelector && child.querySelector('#debug-log')) {
+                        child.style.display = 'block';
+                    } else {
+                        child.style.display = 'none';
+                    }
+                }
+                
+                // 自動モードでUI非表示中であることを示すフラグ
+                this.isAutoModeUIHidden = true;
+            }
+            
             // ユーティリティ関数
             sleep(ms) {
                 return new Promise(resolve => setTimeout(resolve, ms));
@@ -1868,7 +1889,7 @@
                         }, 3000);
                     } else {
                         // ランプ位置が既に設定済みの場合
-                        this.hideUIForAutoMode(); // 設定済みならUI非表示
+                        this.hideUIForMotionAutoMode(); // 動き自動専用UI非表示
                         this.toggleMotionTest();
                         this.updateStatus('動き検知自動モード - 動作開始！');
                     }
