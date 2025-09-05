@@ -575,7 +575,7 @@
         </div>
         
         <div id="status">
-            <div>v2.18.8</div>
+            <div>v2.18.9</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -1849,26 +1849,21 @@
                     btn.textContent = '✓ 動き自動';
                     btn.style.background = '#28a745';
                     
+                    // UI非表示
+                    this.hideUIForMotionAutoMode();
+                    
                     // 自動でランプ位置設定モードに入る
-                    if (!this.lampPosition) {
-                        this.hideUIForMotionAutoMode(); // UI非表示
-                        this.enterSetupMode();
-                        this.updateStatus('動き検知自動モード - ランプ位置設定中...');
-                        
-                        const alert = document.getElementById('vita-alert');
-                        alert.style.display = 'block';
-                        alert.style.background = 'rgba(40,167,69,0.9)';
-                        alert.textContent = '🎯 ランプをタップして設定！';
-                        
-                        setTimeout(() => {
-                            alert.style.display = 'none';
-                        }, 3000);
-                    } else {
-                        // ランプ位置が既に設定済みの場合
-                        this.hideUIForMotionAutoMode(); // 動き自動専用UI非表示
-                        this.toggleMotionTest();
-                        this.updateStatus('動き検知自動モード - 動作開始！');
-                    }
+                    this.enterSetupMode();
+                    this.updateStatus('動き検知自動モード - ランプ位置設定中...');
+                    
+                    const alert = document.getElementById('vita-alert');
+                    alert.style.display = 'block';
+                    alert.style.background = 'rgba(40,167,69,0.9)';
+                    alert.textContent = '🎯 ランプをタップして設定！';
+                    
+                    setTimeout(() => {
+                        alert.style.display = 'none';
+                    }, 3000);
                     
                 } catch (error) {
                     this.isMotionAutoMode = false;
