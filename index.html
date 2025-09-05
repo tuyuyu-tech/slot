@@ -552,8 +552,12 @@
                         <input type="range" id="avg-frames-slider" min="1" max="5" value="3" style="width:100%; height:12px;">
                     </div>
                     <div style="margin-bottom:2px;">
-                        <div style="font-size:7px; margin-bottom:1px;">動き闾値: <span id="motion-threshold-display">30</span></div>
-                        <input type="range" id="motion-threshold-slider" min="5" max="100" value="30" style="width:100%; height:12px;">
+                        <div style="font-size:7px; margin-bottom:1px;">始動闾值: <span id="start-threshold-display">30</span></div>
+                        <input type="range" id="start-threshold-slider" min="5" max="100" value="30" style="width:100%; height:12px;">
+                    </div>
+                    <div style="margin-bottom:2px;">
+                        <div style="font-size:7px; margin-bottom:1px;">停止闾值: <span id="stop-threshold-display">10</span></div>
+                        <input type="range" id="stop-threshold-slider" min="1" max="50" value="10" style="width:100%; height:12px;">
                     </div>
                     <div style="font-size:7px; color:#888;">動き強度: <span id="motion-intensity">0</span></div>
                 </div>
@@ -571,7 +575,7 @@
         </div>
         
         <div id="status">
-            <div>v2.17.1</div>
+            <div>v2.18</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -687,9 +691,11 @@
                 // リール動き検出
                 this.frameHistory = [];        // 最大5フレーム保存
                 this.avgFrameCount = 3;        // 平均フレーム数（1-5）
-                this.motionThreshold = 30;     // 動き検出闾値
+                this.startThreshold = 30;      // 始動検出闾值
+                this.stopThreshold = 10;       // 停止検出闾値
                 this.motionTestActive = false; // テスト状態
                 this.motionTestInterval = null; // テストインターバル
+                this.motionDetectionState = 'waiting'; // 'waiting' -> 'started' -> 'stopping'
                 
                 // カメラFPS設定（60fps固定）
                 this.cameraFPS = 60;
@@ -771,7 +777,8 @@
                 document.getElementById('motion-test-btn').onclick = () => this.toggleMotionTest();
                 document.getElementById('motion-clear-btn').onclick = () => this.clearMotionTest();
                 document.getElementById('avg-frames-slider').oninput = () => this.updateMotionSettings();
-                document.getElementById('motion-threshold-slider').oninput = () => this.updateMotionSettings();
+                document.getElementById('start-threshold-slider').oninput = () => this.updateMotionSettings();
+                document.getElementById('stop-threshold-slider').oninput = () => this.updateMotionSettings();
                 
                 // カメラFPS設定（60fps固定）
                 
@@ -934,6 +941,9 @@
                 
                 // 動き検知自動モード時は動き検出開始
                 if (this.isMotionAutoMode) {
+                    // ランプ位置設定完了時にUI非表示
+                    this.hideUIForAutoMode();
+                    
                     setTimeout(() => {
                         this.toggleMotionTest(); // 動き検出開始
                         this.updateStatus('動き検知自動モード - 動作開始！');
@@ -1829,9 +1839,6 @@
                     btn.textContent = '✓ 動き自動';
                     btn.style.background = '#28a745';
                     
-                    // カメラ開始完了後にUI非表示
-                    this.hideUIForAutoMode();
-                    
                     // 自動でランプ位置設定モードに入る
                     if (!this.lampPosition) {
                         this.enterSetupMode();
@@ -1846,7 +1853,8 @@
                             alert.style.display = 'none';
                         }, 3000);
                     } else {
-                        // ランプ位置が既に設定済みの場合は動き検出開始
+                        // ランプ位置が既に設定済みの場合
+                        this.hideUIForAutoMode(); // 設定済みならUI非表示
                         this.toggleMotionTest();
                         this.updateStatus('動き検知自動モード - 動作開始！');
                     }
@@ -1992,10 +2000,21 @@
                             document.getElementById('avg-frames-slider').value = data.avgFrameCount;
                             document.getElementById('avg-frames-display').textContent = data.avgFrameCount;
                         }
-                        if (data.motionThreshold !== undefined) {
-                            this.motionThreshold = data.motionThreshold;
-                            document.getElementById('motion-threshold-slider').value = data.motionThreshold;
-                            document.getElementById('motion-threshold-display').textContent = data.motionThreshold;
+                        if (data.startThreshold !== undefined) {
+                            this.startThreshold = data.startThreshold;
+                            document.getElementById('start-threshold-slider').value = data.startThreshold;
+                            document.getElementById('start-threshold-display').textContent = data.startThreshold;
+                        }
+                        if (data.stopThreshold !== undefined) {
+                            this.stopThreshold = data.stopThreshold;
+                            document.getElementById('stop-threshold-slider').value = data.stopThreshold;
+                            document.getElementById('stop-threshold-display').textContent = data.stopThreshold;
+                        }
+                        // 旧設定との互換性
+                        if (data.motionThreshold !== undefined && data.startThreshold === undefined) {
+                            this.startThreshold = data.motionThreshold;
+                            document.getElementById('start-threshold-slider').value = data.motionThreshold;
+                            document.getElementById('start-threshold-display').textContent = data.motionThreshold;
                         }
                         
                         // カメラFPS設定（60fps固定なので復元不要）
@@ -2033,7 +2052,8 @@
                         detectionRadius: this.detectionRadius,
                         maxVitaCount: this.maxVitaCount,
                         avgFrameCount: this.avgFrameCount,
-                        motionThreshold: this.motionThreshold,
+                        startThreshold: this.startThreshold,
+                        stopThreshold: this.stopThreshold,
                         lampPosition: this.lampPosition,
                         savedAt: new Date().toISOString()
                     };
@@ -2156,21 +2176,24 @@
             
             clearMotionTest() {
                 this.frameHistory = [];
+                this.motionDetectionState = 'waiting'; // 状態リセット
                 document.getElementById('motion-intensity').textContent = '0';
                 console.log('リール動き検出データクリア');
             }
             
             updateMotionSettings() {
                 this.avgFrameCount = parseInt(document.getElementById('avg-frames-slider').value);
-                this.motionThreshold = parseInt(document.getElementById('motion-threshold-slider').value);
+                this.startThreshold = parseInt(document.getElementById('start-threshold-slider').value);
+                this.stopThreshold = parseInt(document.getElementById('stop-threshold-slider').value);
                 
                 document.getElementById('avg-frames-display').textContent = this.avgFrameCount;
-                document.getElementById('motion-threshold-display').textContent = this.motionThreshold;
+                document.getElementById('start-threshold-display').textContent = this.startThreshold;
+                document.getElementById('stop-threshold-display').textContent = this.stopThreshold;
                 
                 // 設定保存
                 this.saveMachineSettings(this.currentMachine);
                 
-                console.log(`動き検出設定更新: 平均${this.avgFrameCount}フレーム, 閾値${this.motionThreshold}`);
+                console.log(`動き検出設定更新: 平均${this.avgFrameCount}フレーム, 始動${this.startThreshold}, 停止${this.stopThreshold}`);
             }
             
             
@@ -2197,9 +2220,19 @@
                     // リアルタイム表示更新
                     document.getElementById('motion-intensity').textContent = motionIntensity.toFixed(1);
                     
-                    // 始動判定
-                    if (motionIntensity > this.motionThreshold) {
-                        this.onReelMotionDetected(motionIntensity);
+                    // 状態に応じた判定
+                    if (this.motionDetectionState === 'waiting') {
+                        // 始動待ち状態：始動閾値を超えたら始動検知
+                        if (motionIntensity > this.startThreshold) {
+                            this.motionDetectionState = 'started';
+                            this.onReelMotionDetected(motionIntensity);
+                        }
+                    } else if (this.motionDetectionState === 'started') {
+                        // 始動済み状態：停止閾値を下回ったら停止待ち状態に
+                        if (motionIntensity < this.stopThreshold) {
+                            this.motionDetectionState = 'waiting';
+                            console.log(`リール停止検知: 強度${motionIntensity.toFixed(1)} < 停止閾値${this.stopThreshold}`);
+                        }
                     }
                 }
             }
