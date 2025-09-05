@@ -575,7 +575,7 @@
         </div>
         
         <div id="status">
-            <div>v2.18</div>
+            <div>v2.18.1</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -897,6 +897,10 @@
             }
             
             onCanvasClick(event) {
+                console.log('Canvas clicked, setupBtn active:', document.getElementById('setupBtn').classList.contains('active'));
+                console.log('Motion auto mode:', this.isMotionAutoMode);
+                console.log('Auto mode:', this.isAutoMode);
+                
                 if (!document.getElementById('setupBtn').classList.contains('active')) return;
                 
                 const rect = this.canvas.getBoundingClientRect();
@@ -1844,6 +1848,12 @@
                         this.enterSetupMode();
                         this.updateStatus('動き検知自動モード - ランプ位置設定中...');
                         
+                        // デバッグ情報
+                        console.log('動き自動モード: ランプ位置設定モード開始');
+                        console.log('Canvas display:', this.canvas.style.display);
+                        console.log('Canvas visibility:', this.canvas.style.visibility);
+                        console.log('setupBtn active:', document.getElementById('setupBtn').classList.contains('active'));
+                        
                         const alert = document.getElementById('vita-alert');
                         alert.style.display = 'block';
                         alert.style.background = 'rgba(40,167,69,0.9)';
@@ -2281,8 +2291,11 @@
                 
                 // リール動き検知自動モード時はビタタイミングで自動押下
                 if (this.isMotionAutoMode && this.bluetoothCharacteristic) {
+                    console.log('動き検知自動モード: executeVitaTiming実行');
                     this.executeVitaTiming();
                     return; // 自動モード時はアラート表示をスキップ
+                } else if (this.isMotionAutoMode && !this.bluetoothCharacteristic) {
+                    console.log('動き検知自動モード: ESP32未接続');
                 }
                 
                 // 通常モード時は既存のアラート形式でポップアップ表示
