@@ -490,6 +490,7 @@
             <button id="resetBtn">リセット</button>
             <button id="esp32TestBtn" style="background:#ffc107; color:#000;">ESP32テスト</button>
             <button id="autoModeBtn" style="background:#FF5722; color:#fff;">自動モード</button>
+            <button id="motionAutoModeBtn" style="background:#9C27B0; color:#fff;">動き自動</button>
             <button id="toggleUIBtn" style="background:#28a745;">UI切替</button>
             <button id="disguiseBtn" style="background:#dc3545;">消灯</button>
             <button id="clockBtn" style="background:#007bff;">時計</button>
@@ -570,7 +571,7 @@
         </div>
         
         <div id="status">
-            <div>v2.16.1</div>
+            <div>v2.17</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -715,6 +716,7 @@
                 
                 // 自動モードフラグ
                 this.isAutoMode = false;
+                this.isMotionAutoMode = false; // リール動き検知自動モード
                 
                 // スクリーンショット機能削除済み
                 
@@ -775,6 +777,7 @@
                 
                 // 自動モード
                 document.getElementById('autoModeBtn').onclick = () => this.connectToBluetooth();
+                document.getElementById('motionAutoModeBtn').onclick = () => this.connectToBluetoothMotion();
                 
                 this.canvas.onclick = (e) => this.onCanvasClick(e);
                 this.canvas.ondblclick = (e) => this.onDoubleClick(e);
@@ -927,6 +930,26 @@
                             }, 2000);
                         }
                     }, 2000); // ベースライン確立待ち
+                }
+                
+                // 動き検知自動モード時は動き検出開始
+                if (this.isMotionAutoMode) {
+                    setTimeout(() => {
+                        this.toggleMotionTest(); // 動き検出開始
+                        this.updateStatus('動き検知自動モード - 動作開始！');
+                        
+                        // 準備完了アラート表示
+                        if (!this.isAutoModeUIHidden) {
+                            const alert = document.getElementById('vita-alert');
+                            alert.style.display = 'block';
+                            alert.style.background = 'rgba(156,39,176,0.9)'; // 紫色
+                            alert.textContent = '🎰 準備完了！リール動きを待機中';
+                            
+                            setTimeout(() => {
+                                alert.style.display = 'none';
+                            }, 2000);
+                        }
+                    }, 1000); // 動き検出はベースライン不要なので短縮
                 }
             }
             
@@ -1783,6 +1806,68 @@
                 }
             }
             
+            async connectToBluetoothMotion() {
+                const btn = document.getElementById('motionAutoModeBtn');
+                const originalText = btn.textContent;
+                btn.textContent = '接続中...';
+                btn.disabled = true;
+                btn.style.background = '#ffc107';
+                
+                try {
+                    // リール動き検知自動モードフラグを設定
+                    this.isMotionAutoMode = true;
+                    
+                    // 先にカメラ開始（ユーザージェスチャー有効時）
+                    if (!this.stream) {
+                        await this.startCamera();
+                        this.updateStatus('カメラ開始完了');
+                        await this.sleep(1000); // カメラ安定待ち
+                    }
+                    
+                    // その後ESP32接続
+                    await this.connectBluetooth();
+                    btn.textContent = '✓ 動き自動';
+                    btn.style.background = '#28a745';
+                    
+                    // カメラ開始完了後にUI非表示
+                    this.hideUIForAutoMode();
+                    
+                    // 自動でランプ位置設定モードに入る
+                    if (!this.lampPosition) {
+                        this.updateStatus('動き検知自動モード - ランプ位置設定中...');
+                        const alert = document.getElementById('vita-alert');
+                        alert.style.display = 'block';
+                        alert.style.background = 'rgba(40,167,69,0.9)';
+                        alert.textContent = '🎯 ランプをタップして設定！';
+                        
+                        setTimeout(() => {
+                            alert.style.display = 'none';
+                        }, 3000);
+                    } else {
+                        // ランプ位置が既に設定済みの場合は動き検出開始
+                        this.toggleMotionTest();
+                        this.updateStatus('動き検知自動モード - 動作開始！');
+                    }
+                    
+                } catch (error) {
+                    this.isMotionAutoMode = false;
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                    btn.style.background = '#9C27B0';
+                    this.updateStatus('動き自動モード失敗: ' + error.message);
+                    console.error('動き自動モード失敗:', error);
+                    
+                    const alert = document.getElementById('vita-alert');
+                    alert.style.display = 'block';
+                    alert.style.background = 'rgba(220,53,69,0.9)';
+                    alert.textContent = '❌ 動き自動モード失敗';
+                    
+                    setTimeout(() => {
+                        alert.style.display = 'none';
+                    }, 3000);
+                }
+            }
+            
             playBeep() {
                 try {
                     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -2159,7 +2244,13 @@
             onReelMotionDetected(intensity) {
                 console.log(`リール動き検出! 強度: ${intensity.toFixed(1)}`);
                 
-                // 既存のアラート形式でポップアップ表示
+                // リール動き検知自動モード時はビタタイミングで自動押下
+                if (this.isMotionAutoMode && this.bluetoothCharacteristic) {
+                    this.executeVitaTiming();
+                    return; // 自動モード時はアラート表示をスキップ
+                }
+                
+                // 通常モード時は既存のアラート形式でポップアップ表示
                 const alert = document.getElementById('vita-alert');
                 alert.textContent = `🎰 リール動き検出! 強度: ${intensity.toFixed(1)}`;
                 alert.style.background = 'rgba(255,165,0,0.9)';
