@@ -575,7 +575,7 @@
         </div>
         
         <div id="status">
-            <div>v2.18.7</div>
+            <div>v2.18.8</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -1851,6 +1851,7 @@
                     
                     // 自動でランプ位置設定モードに入る
                     if (!this.lampPosition) {
+                        this.hideUIForMotionAutoMode(); // UI非表示
                         this.enterSetupMode();
                         this.updateStatus('動き検知自動モード - ランプ位置設定中...');
                         
