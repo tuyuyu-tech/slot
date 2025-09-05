@@ -615,7 +615,7 @@
                     </div>
                     <div class="adjustment-right">
                         <span class="cycle-value" id="disguise-cycle">T0.780</span>
-                        <span class="lock-icon" id="disguise-lock">🔓</span>
+                        <span class="lock-icon" id="disguise-lock">🔒</span>
                     </div>
                 </div>
                 </div>
@@ -657,7 +657,7 @@
                 this.vitaStopped = false;  // 停止フラグ
                 
                 // 時計画面ロック
-                this.clockLocked = false;  // 調整ロック状態
+                this.clockLocked = true;   // 調整ロック状態（初期はロック）
                 
                 // 統計
                 this.frameCount = 0;
@@ -1945,10 +1945,10 @@
                 app.updateClockCycleDisplay();
                 app.updateClockVitaLimitDisplay();
                 
-                // ロック状態初期化
-                app.clockLocked = false;
-                document.getElementById('disguise-lock').textContent = '🔓';
-                document.querySelector('.lock-icon').classList.remove('locked');
+                // ロック状態初期化（ロック状態で開始）
+                app.clockLocked = true;
+                document.getElementById('disguise-lock').textContent = '🔒';
+                document.querySelector('.lock-icon').classList.add('locked');
             }
             
             stop() {
