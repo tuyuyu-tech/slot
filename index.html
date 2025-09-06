@@ -575,7 +575,7 @@
         </div>
         
         <div id="status">
-            <div>v2.18.13</div>
+            <div>v2.18.14</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -698,8 +698,7 @@
                 this.motionDetectionState = 'waiting'; // 'waiting' -> 'started' -> 'stopping'
                 this.stopFrameCount = 0;       // 停止フレーム連続カウンター
                 
-                // カメラFPS設定（60fps固定）
-                this.cameraFPS = 60;
+                // カメラ設定（60fps固定）
                 
                 // 統計
                 this.frameCount = 0;
@@ -724,8 +723,6 @@
                 // 自動モードフラグ
                 this.isAutoMode = false;
                 this.isMotionAutoMode = false; // リール動き検知自動モード
-                
-                // スクリーンショット機能削除済み
                 
                 // 設定保存機能
                 this.loadSettings();
@@ -781,8 +778,6 @@
                 document.getElementById('start-threshold-slider').oninput = () => this.updateMotionSettings();
                 document.getElementById('stop-threshold-slider').oninput = () => this.updateMotionSettings();
                 
-                // カメラFPS設定（60fps固定）
-                
                 // 自動モード
                 document.getElementById('autoModeBtn').onclick = () => this.connectToBluetooth();
                 document.getElementById('motionAutoModeBtn').onclick = () => this.connectToBluetoothMotion();
@@ -800,7 +795,7 @@
                             facingMode: 'environment', // バックカメラ優先
                             width: { ideal: 1280 },
                             height: { ideal: 720 },
-                            frameRate: { ideal: this.cameraFPS, min: 30 } // 選択したFPS
+                            frameRate: { ideal: 60, min: 30 } // 60fps固定
                         }
                     };
                     
@@ -808,9 +803,6 @@
                     this.video.srcObject = this.stream;
                     
                     this.video.onloadedmetadata = () => {
-                        // カメラの実際のFPSを取得・表示
-                        this.updateCameraFPS();
-                        
                         // キャンバスサイズ調整
                         const aspectRatio = this.video.videoWidth / this.video.videoHeight;
                         const maxWidth = window.innerWidth * 0.9;
@@ -1475,88 +1467,6 @@
                 document.getElementById('vita-count').textContent = `${this.vitaCount}/${maxText}`;
             }
             
-            captureVitaScreenshot(cycleNumber) {
-                try {
-                    // Canvasの内容を画像データとして取得
-                    const imageData = this.canvas.toDataURL('image/png', 1.0);
-                    
-                    // タイムスタンプ生成
-                    const now = new Date();
-                    const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
-                    
-                    // ファイル名生成
-                    const filename = `vita_${cycleNumber}_${timestamp}.png`;
-                    
-                    // ダウンロードリンクを作成して自動クリック
-                    const link = document.createElement('a');
-                    link.download = filename;
-                    link.href = imageData;
-                    
-                    // 一時的にDOMに追加してクリック
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    
-                    console.log(`ビタタイミングスクショ保存: ${filename} (ダウンロードフォルダに保存)`);
-                    
-                    // 自動モード時はスクリーンショット通知も非表示
-                    if (!this.isAutoModeUIHidden) {
-                        const alert = document.createElement('div');
-                        alert.style.cssText = `
-                            position: fixed;
-                            top: 20px;
-                            right: 20px;
-                            background: rgba(0, 123, 255, 0.9);
-                            color: white;
-                            padding: 10px 15px;
-                            border-radius: 5px;
-                            font-size: 14px;
-                            font-weight: bold;
-                            z-index: 2000;
-                            animation: fadeInOut 3s ease-in-out;
-                        `;
-                        alert.textContent = `📸 ${filename} ダウンロード中`;
-                        
-                        document.body.appendChild(alert);
-                        
-                        setTimeout(() => {
-                            if (alert.parentNode) {
-                                alert.parentNode.removeChild(alert);
-                            }
-                        }, 3000);
-                    }
-                    
-                } catch (error) {
-                    console.error('スクリーンショット失敗:', error);
-                    
-                    // 自動モード時はエラー通知も非表示
-                    if (!this.isAutoModeUIHidden) {
-                        const errorAlert = document.createElement('div');
-                        errorAlert.style.cssText = `
-                            position: fixed;
-                            top: 20px;
-                            right: 20px;
-                            background: rgba(220, 53, 69, 0.9);
-                            color: white;
-                            padding: 10px 15px;
-                            border-radius: 5px;
-                            font-size: 14px;
-                            font-weight: bold;
-                            z-index: 2000;
-                        `;
-                        errorAlert.textContent = '❌ スクリーンショット失敗';
-                        
-                        document.body.appendChild(errorAlert);
-                        
-                        setTimeout(() => {
-                            if (errorAlert.parentNode) {
-                                errorAlert.parentNode.removeChild(errorAlert);
-                            }
-                        }, 3000);
-                    }
-                }
-            }
-            
             playVitaBeep() {
                 try {
                     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -1778,55 +1688,6 @@
                 }
             }
             
-            updateCameraFPS() {
-                try {
-                    if (!this.stream) {
-                        document.getElementById('camera-fps').textContent = 'No Stream';
-                        return;
-                    }
-                    
-                    const videoTrack = this.stream.getVideoTracks()[0];
-                    if (!videoTrack) {
-                        document.getElementById('camera-fps').textContent = 'No Track';
-                        return;
-                    }
-                    
-                    const settings = videoTrack.getSettings();
-                    console.log('カメラ設定情報:', settings);
-                    
-                    // iPhone用のFPS取得（複数の方法を試す）
-                    let fps = 'Auto';
-                    if (settings.frameRate) {
-                        fps = settings.frameRate;
-                    } else if (settings.width && settings.height) {
-                        // 解像度から推測（iPhoneの一般的な値）
-                        if (settings.width >= 1920) fps = '30-60';
-                        else if (settings.width >= 1280) fps = '30';
-                        else fps = '30';
-                    }
-                    
-                    document.getElementById('camera-fps').textContent = fps;
-                    
-                    // iPhoneでもステータス表示でFPS情報を確認可能に
-                    const resolution = `${settings.width || '?'}x${settings.height || '?'}`;
-                    console.log(`カメラFPS: ${fps}, 解像度: ${resolution}`);
-                    
-                    // capabilitiesの取得を試す（対応していない場合もある）
-                    try {
-                        const capabilities = videoTrack.getCapabilities();
-                        if (capabilities && capabilities.frameRate) {
-                            console.log('対応FPS範囲:', capabilities.frameRate);
-                        }
-                    } catch (capError) {
-                        console.log('capabilities未対応:', capError.message);
-                    }
-                    
-                } catch (error) {
-                    console.error('カメラFPS取得エラー:', error);
-                    document.getElementById('camera-fps').textContent = 'Error';
-                }
-            }
-            
             async connectToBluetoothMotion() {
                 const btn = document.getElementById('motionAutoModeBtn');
                 const originalText = btn.textContent;
@@ -2016,8 +1877,6 @@
                         }
                         
                         // カメラFPS設定（60fps固定なので復元不要）
-                        
-                        // スクリーンショット機能削除
                         
                         // ランプ位置復元
                         if (data.lampPosition) {
