@@ -575,7 +575,7 @@
         </div>
         
         <div id="status">
-            <div>v2.18.18</div>
+            <div>v2.18.19</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -727,6 +727,15 @@
             drawFrame() {
                 this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
                 this.frameCount++;
+                
+                // カスタム処理があれば実行
+                if (this.customFrameProcessor) {
+                    this.customFrameProcessor();
+                }
+            }
+            
+            setCustomFrameProcessor(processor) {
+                this.customFrameProcessor = processor;
             }
             
             updateFpsCounter() {
@@ -740,7 +749,7 @@
             }
             
             getCurrentFrameData(x, y, radius) {
-                if (!this.stream || x === null || y === null) return null;
+                if (!this.cameraController.isActive() || x === null || y === null) return null;
                 
                 const imageData = this.ctx.getImageData(
                     x - radius,
@@ -1220,6 +1229,7 @@
                 );
                 
                 // 後方互換性のためのプロパティ
+                this.video = this.cameraController.video;
                 this.canvas = this.cameraController.canvas;
                 this.ctx = this.cameraController.ctx;
                 
@@ -1228,6 +1238,9 @@
                 
                 // Settings Manager の初期化
                 this.settingsManager = new SettingsManager();
+                
+                // CameraControllerにカスタム処理を設定
+                this.cameraController.setCustomFrameProcessor(() => this.customProcessFrame());
                 
                 this.isDetecting = false;
                 
@@ -1390,45 +1403,13 @@
                 try {
                     this.updateStatus('カメラ起動中...');
                     
-                    const constraints = {
-                        video: {
-                            facingMode: 'environment', // バックカメラ優先
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 },
-                            frameRate: { ideal: 60, min: 30 } // 60fps固定
-                        }
-                    };
+                    await this.cameraController.startCamera();
+                    this.stream = this.cameraController.stream;
                     
-                    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
-                    this.video.srcObject = this.stream;
+                    this.updateStatus('カメラ起動完了');
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('setupBtn').disabled = false;
                     
-                    this.video.onloadedmetadata = () => {
-                        // キャンバスサイズ調整
-                        const aspectRatio = this.video.videoWidth / this.video.videoHeight;
-                        const maxWidth = window.innerWidth * 0.9;
-                        const maxHeight = window.innerHeight * 0.8;
-                        
-                        if (maxWidth / aspectRatio <= maxHeight) {
-                            this.canvas.width = this.video.videoWidth;
-                            this.canvas.height = this.video.videoHeight;
-                            this.canvas.style.width = maxWidth + 'px';
-                            this.canvas.style.height = (maxWidth / aspectRatio) + 'px';
-                        } else {
-                            this.canvas.width = this.video.videoWidth;
-                            this.canvas.height = this.video.videoHeight;
-                            this.canvas.style.width = (maxHeight * aspectRatio) + 'px';
-                            this.canvas.style.height = maxHeight + 'px';
-                        }
-                        
-                        document.getElementById('resolution').textContent = 
-                            `${this.video.videoWidth}x${this.video.videoHeight}`;
-                        
-                        this.startVideoLoop();
-                        this.updateStatus('カメラ起動完了');
-                        
-                        document.getElementById('startBtn').disabled = true;
-                        document.getElementById('setupBtn').disabled = false;
-                    };
                 } catch (error) {
                     console.error('カメラエラー:', error);
                     alert('カメラにアクセスできません: ' + error.message);
@@ -1436,30 +1417,7 @@
                 }
             }
             
-            startVideoLoop() {
-                const loop = () => {
-                    if (this.video.readyState >= 2) {
-                        this.processFrame();
-                    }
-                    this.animationId = requestAnimationFrame(loop);
-                };
-                loop();
-            }
-            
-            processFrame() {
-                // フレーム描画
-                this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
-                
-                // FPS計算
-                this.frameCount++;
-                const now = Date.now();
-                if (now - this.lastFpsUpdate >= 1000) {
-                    this.currentFps = Math.round(this.frameCount * 1000 / (now - this.lastFpsUpdate));
-                    document.getElementById('fps').textContent = this.currentFps;
-                    this.frameCount = 0;
-                    this.lastFpsUpdate = now;
-                }
-                
+            customProcessFrame() {
                 // ランプ位置マーカー描画
                 if (this.detectionEngine.lampPosition) {
                     this.detectionEngine.drawLampMarker(this.canvas);
@@ -2066,7 +2024,7 @@
             }
             
             async startCameraIfNeeded() {
-                if (!this.stream) {
+                if (!this.cameraController.isActive()) {
                     await this.startCamera();
                     this.updateStatus('カメラ開始完了');
                     await this.sleep(1000); // カメラ安定待ち
@@ -2158,7 +2116,7 @@
                     this.isMotionAutoMode = true;
                     
                     // 先にカメラ開始（ユーザージェスチャー有効時）
-                    if (!this.stream) {
+                    if (!this.cameraController.isActive()) {
                         await this.startCamera();
                         this.updateStatus('カメラ開始完了');
                         await this.sleep(1000); // カメラ安定待ち
@@ -2458,7 +2416,7 @@
             }
             
             startMotionTest() {
-                if (!this.stream) {
+                if (!this.cameraController.isActive()) {
                     alert('カメラを開始してください');
                     return;
                 }
@@ -2514,7 +2472,7 @@
             
             
             detectReelMotion() {
-                if (!this.stream || !this.lampPosition) return;
+                if (!this.cameraController.isActive() || !this.lampPosition) return;
                 
                 // 現在フレームを取得
                 this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
