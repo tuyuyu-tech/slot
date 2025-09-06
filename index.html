@@ -575,7 +575,7 @@
         </div>
         
         <div id="status">
-            <div>v2.18.14</div>
+            <div>v2.18.18</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -653,25 +653,583 @@
     </div>
 
     <script>
-        class RealtimeLampDetector {
-            constructor() {
-                this.video = document.getElementById('video');
-                this.canvas = document.getElementById('canvas');
+        // Camera Controller - カメラ制御専用クラス
+        class CameraController {
+            constructor(videoElement, canvasElement) {
+                this.video = videoElement;
+                this.canvas = canvasElement;
                 this.ctx = this.canvas.getContext('2d');
-                
                 this.stream = null;
                 this.animationId = null;
-                this.isDetecting = false;
                 
-                // ランプ検知設定
+                // FPS統計
+                this.frameCount = 0;
+                this.lastFpsUpdate = Date.now();
+                this.currentFps = 0;
+            }
+            
+            async startCamera() {
+                try {
+                    const constraints = {
+                        video: {
+                            facingMode: 'environment', // バックカメラ優先
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            frameRate: { ideal: 60, min: 30 } // 60fps固定
+                        }
+                    };
+                    
+                    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    this.video.srcObject = this.stream;
+                    
+                    return new Promise((resolve) => {
+                        this.video.onloadedmetadata = () => {
+                            this.adjustCanvasSize();
+                            this.startVideoLoop();
+                            resolve();
+                        };
+                    });
+                } catch (error) {
+                    throw new Error(`カメラ起動失敗: ${error.message}`);
+                }
+            }
+            
+            adjustCanvasSize() {
+                const aspectRatio = this.video.videoWidth / this.video.videoHeight;
+                const maxWidth = window.innerWidth * 0.9;
+                const maxHeight = window.innerHeight * 0.8;
+                
+                if (maxWidth / aspectRatio <= maxHeight) {
+                    this.canvas.width = this.video.videoWidth;
+                    this.canvas.height = this.video.videoHeight;
+                    this.canvas.style.width = maxWidth + 'px';
+                    this.canvas.style.height = (maxWidth / aspectRatio) + 'px';
+                } else {
+                    this.canvas.width = this.video.videoWidth;
+                    this.canvas.height = this.video.videoHeight;
+                    this.canvas.style.width = (maxHeight * aspectRatio) + 'px';
+                    this.canvas.style.height = maxHeight + 'px';
+                }
+                
+                document.getElementById('resolution').textContent = 
+                    `${this.video.videoWidth}x${this.video.videoHeight}`;
+            }
+            
+            startVideoLoop() {
+                const loop = () => {
+                    this.drawFrame();
+                    this.updateFpsCounter();
+                    this.animationId = requestAnimationFrame(loop);
+                };
+                loop();
+            }
+            
+            drawFrame() {
+                this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                this.frameCount++;
+            }
+            
+            updateFpsCounter() {
+                const now = Date.now();
+                if (now - this.lastFpsUpdate >= 1000) {
+                    this.currentFps = Math.round(this.frameCount * 1000 / (now - this.lastFpsUpdate));
+                    document.getElementById('fps').textContent = this.currentFps;
+                    this.frameCount = 0;
+                    this.lastFpsUpdate = now;
+                }
+            }
+            
+            getCurrentFrameData(x, y, radius) {
+                if (!this.stream || x === null || y === null) return null;
+                
+                const imageData = this.ctx.getImageData(
+                    x - radius,
+                    y - radius,
+                    radius * 2,
+                    radius * 2
+                );
+                return imageData.data;
+            }
+            
+            stopCamera() {
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                    this.stream = null;
+                }
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+            }
+            
+            isActive() {
+                return this.stream !== null;
+            }
+        }
+
+        class BluetoothManager {
+            constructor() {
+                this.bluetoothDevice = null;
+                this.bluetoothCharacteristic = null;
+                
+                // Bluetooth設定
+                this.SERVICE_UUID = '12345678-1234-1234-1234-123456789abc';
+                this.CHARACTERISTIC_UUID = '87654321-4321-4321-4321-cba987654321';
+                this.DEVICE_NAME = 'ESP32_SlotBot';
+            }
+            
+            async connect() {
+                try {
+                    console.log('Bluetooth接続開始...');
+                    
+                    // Web Bluetooth APIでESP32デバイスを検索
+                    this.bluetoothDevice = await navigator.bluetooth.requestDevice({
+                        filters: [{ name: this.DEVICE_NAME }],
+                        optionalServices: [this.SERVICE_UUID]
+                    });
+                    
+                    console.log('デバイス選択:', this.bluetoothDevice.name);
+                    
+                    // GATT接続
+                    const server = await this.bluetoothDevice.gatt.connect();
+                    console.log('GATT接続成功');
+                    
+                    // サービス取得
+                    const service = await server.getPrimaryService(this.SERVICE_UUID);
+                    console.log('サービス取得成功');
+                    
+                    // キャラクタリスティック取得
+                    this.bluetoothCharacteristic = await service.getCharacteristic(this.CHARACTERISTIC_UUID);
+                    console.log('キャラクタリスティック取得成功');
+                    
+                    // 切断イベント監視
+                    this.bluetoothDevice.addEventListener('gattserverdisconnected', () => {
+                        console.log('Bluetooth切断');
+                        this.onDisconnected();
+                    });
+                    
+                    console.log('Bluetooth接続完了');
+                    return true;
+                } catch (error) {
+                    console.error('Bluetooth接続エラー:', error);
+                    throw error;
+                }
+            }
+            
+            onDisconnected() {
+                this.bluetoothDevice = null;
+                this.bluetoothCharacteristic = null;
+                
+                // UI更新はコールバックで処理
+                if (this.onDisconnectedCallback) {
+                    this.onDisconnectedCallback();
+                }
+            }
+            
+            setDisconnectedCallback(callback) {
+                this.onDisconnectedCallback = callback;
+            }
+            
+            isConnected() {
+                return this.bluetoothDevice && this.bluetoothDevice.gatt.connected;
+            }
+            
+            async sendPress() {
+                try {
+                    console.log('ESP32にBluetooth経由でPRESSコマンド送信中...');
+                    
+                    if (!this.isConnected()) {
+                        await this.connect();
+                    }
+                    
+                    // BLEでPRESSコマンド送信
+                    const encoder = new TextEncoder();
+                    await this.bluetoothCharacteristic.writeValue(encoder.encode("PRESS"));
+                    
+                    console.log('Bluetooth経由でPRESSコマンド送信完了');
+                    return true;
+                } catch (error) {
+                    console.error('ESP32 Bluetooth通信エラー:', error);
+                    return false;
+                }
+            }
+        }
+
+        class DetectionEngine {
+            constructor(canvasContext) {
+                this.ctx = canvasContext;
+                
+                // Detection properties
                 this.lampPosition = null;
                 this.detectionRadius = 15;
+                this.baseline = null;
+                this.threshold = null;
+                this.detectionThresholdOffset = 30;
+                
+                // State tracking
+                this.lampLit = false;
+                this.litStartTime = null;
+                this.brightnessHistory = [];
+                
+                // Motion detection
+                this.startThreshold = 30;
+                this.stopThreshold = 10;
+            }
+            
+            setLampPosition(x, y) {
+                this.lampPosition = { x, y };
+            }
+            
+            setDetectionRadius(radius) {
+                this.detectionRadius = radius;
+            }
+            
+            setThresholds(startThreshold, stopThreshold) {
+                this.startThreshold = startThreshold;
+                this.stopThreshold = stopThreshold;
+            }
+            
+            extractLampBrightness(canvas) {
+                if (!this.lampPosition) return 0;
+                
+                const x = this.lampPosition.x;
+                const y = this.lampPosition.y;
+                const radius = this.detectionRadius;
+                
+                // ランプ領域のピクセルデータ取得
+                const imageData = this.ctx.getImageData(
+                    Math.max(0, x - radius),
+                    Math.max(0, y - radius),
+                    Math.min(canvas.width, radius * 2),
+                    Math.min(canvas.height, radius * 2)
+                );
+                
+                let totalBrightness = 0;
+                let pixelCount = 0;
+                
+                for (let i = 0; i < imageData.data.length; i += 4) {
+                    const r = imageData.data[i];
+                    const g = imageData.data[i + 1];
+                    const b = imageData.data[i + 2];
+                    
+                    // グレースケール変換
+                    const brightness = (r + g + b) / 3;
+                    totalBrightness += brightness;
+                    pixelCount++;
+                }
+                
+                return pixelCount > 0 ? totalBrightness / pixelCount : 0;
+            }
+            
+            establishBaseline(canvas, callback) {
+                this.brightnessHistory = [];
+                this.baseline = null;
+                
+                // 30フレーム分のベースライン収集
+                const collectBaseline = () => {
+                    if (this.brightnessHistory.length < 30) {
+                        const brightness = this.extractLampBrightness(canvas);
+                        this.brightnessHistory.push(brightness);
+                        setTimeout(collectBaseline, 50); // 20FPSで収集
+                    } else {
+                        const mean = this.brightnessHistory.reduce((a, b) => a + b, 0) / this.brightnessHistory.length;
+                        const std = Math.sqrt(this.brightnessHistory.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / this.brightnessHistory.length);
+                        
+                        this.baseline = { mean, std };
+                        this.threshold = mean + this.detectionThresholdOffset;
+                        
+                        if (callback) callback(this.baseline, this.threshold);
+                    }
+                };
+                collectBaseline();
+            }
+            
+            updateThresholdSettings(newThreshold) {
+                this.detectionThresholdOffset = newThreshold;
+                if (this.baseline) {
+                    this.threshold = this.baseline.mean + newThreshold;
+                    return this.threshold;
+                }
+                return null;
+            }
+            
+            detectLampChange(canvas, onLampLit, onLampUnlit) {
+                const currentBrightness = this.extractLampBrightness(canvas);
+                
+                // ランプ点灯検知
+                if (!this.lampLit && currentBrightness > this.threshold) {
+                    this.lampLit = true;
+                    this.litStartTime = Date.now();
+                    console.log('ランプ点灯検知:', currentBrightness);
+                    if (onLampLit) onLampLit(currentBrightness);
+                    return 'lit';
+                }
+                
+                // ランプ消灯検知（リール始動）
+                if (this.lampLit && currentBrightness <= this.baseline.mean * 1.1) {
+                    const duration = (Date.now() - this.litStartTime) / 1000;
+                    console.log('ランプ消灯検知！継続時間:', duration + '秒');
+                    
+                    this.lampLit = false;
+                    this.litStartTime = null;
+                    if (onLampUnlit) onLampUnlit(duration);
+                    return 'unlit';
+                }
+                
+                return 'no_change';
+            }
+            
+            calculateMotionIntensity(currentFrame, avgFrame) {
+                let totalDiff = 0;
+                const pixelCount = currentFrame.length;
+                
+                for (let i = 0; i < pixelCount; i += 4) { // RGBAのため4バイトおき
+                    const currentGray = (currentFrame[i] + currentFrame[i+1] + currentFrame[i+2]) / 3;
+                    const avgGray = (avgFrame[i] + avgFrame[i+1] + avgFrame[i+2]) / 3;
+                    totalDiff += Math.abs(currentGray - avgGray);
+                }
+                
+                return totalDiff / (pixelCount / 4); // ピクセル数で平均化
+            }
+            
+            drawLampMarker(canvas) {
+                if (!this.lampPosition) return;
+                
+                this.ctx.strokeStyle = this.lampLit ? '#ff0000' : '#00ff00';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.arc(this.lampPosition.x, this.lampPosition.y, this.detectionRadius, 0, 2 * Math.PI);
+                this.ctx.stroke();
+                
+                // 中心点
+                this.ctx.fillStyle = this.lampLit ? '#ff0000' : '#00ff00';
+                this.ctx.beginPath();
+                this.ctx.arc(this.lampPosition.x, this.lampPosition.y, 2, 0, 2 * Math.PI);
+                this.ctx.fill();
+            }
+            
+            isLampLit() {
+                return this.lampLit;
+            }
+            
+            getBaseline() {
+                return this.baseline;
+            }
+            
+            getThreshold() {
+                return this.threshold;
+            }
+            
+            reset() {
+                this.lampLit = false;
+                this.litStartTime = null;
                 this.brightnessHistory = [];
                 this.baseline = null;
                 this.threshold = null;
-                this.detectionThresholdOffset = 30; // 検知閾値オフセット（調整可能）
-                this.lampLit = false;
-                this.litStartTime = null;
+            }
+        }
+
+        class SettingsManager {
+            constructor() {
+                // Current machine settings
+                this.currentMachine = 'machine1';
+                
+                // Machine display names
+                this.machineNames = {
+                    'machine1': 'バジリスク絆2',
+                    'machine2': '炎炎ノ消防隊',
+                    'machine3': 'Lスマスロ北斗の拳',
+                    'machine4': '機種D',
+                    'machine5': '機種E'
+                };
+            }
+            
+            loadSettings() {
+                try {
+                    // 最後に使用した機種を復元
+                    const lastMachine = localStorage.getItem('slotDetectorLastMachine');
+                    if (lastMachine) {
+                        this.currentMachine = lastMachine;
+                        document.getElementById('machine-select').value = lastMachine;
+                    }
+                    
+                    return this.loadMachineSettings(this.currentMachine);
+                } catch (e) {
+                    console.log('設定読み込みエラー:', e);
+                    return null;
+                }
+            }
+            
+            loadMachineSettings(machineType) {
+                try {
+                    const settings = localStorage.getItem(`slotDetectorSettings_${machineType}`);
+                    if (settings) {
+                        const data = JSON.parse(settings);
+                        this.applySettingsToUI(data);
+                        console.log(`${machineType} 設定読み込み完了:`, data);
+                        return data;
+                    } else {
+                        console.log(`${machineType} の設定が見つかりません`);
+                        return null;
+                    }
+                } catch (e) {
+                    console.log('機種別設定読み込みエラー:', e);
+                    return null;
+                }
+            }
+            
+            applySettingsToUI(data) {
+                // オフセット設定復元
+                if (data.vitaOffset !== undefined) {
+                    document.getElementById('timing-offset').value = data.vitaOffset;
+                }
+                
+                // 周期設定復元
+                if (data.vitaCycle !== undefined) {
+                    document.getElementById('timing-cycle').value = data.vitaCycle;
+                }
+                
+                // 検知閾値復元
+                if (data.detectionThresholdOffset !== undefined) {
+                    document.getElementById('detection-threshold').value = data.detectionThresholdOffset;
+                }
+                
+                // 検出範囲復元
+                if (data.detectionRadius !== undefined) {
+                    document.getElementById('detection-radius').value = data.detectionRadius;
+                }
+                
+                // ビタ回数制限復元
+                if (data.maxVitaCount !== undefined) {
+                    document.getElementById('vita-limit-select').value = data.maxVitaCount;
+                }
+                
+                // 動き検出設定復元
+                if (data.avgFrameCount !== undefined) {
+                    document.getElementById('avg-frames-slider').value = data.avgFrameCount;
+                    document.getElementById('avg-frames-display').textContent = data.avgFrameCount;
+                }
+                if (data.startThreshold !== undefined) {
+                    document.getElementById('start-threshold-slider').value = data.startThreshold;
+                    document.getElementById('start-threshold-display').textContent = data.startThreshold;
+                }
+                if (data.stopThreshold !== undefined) {
+                    document.getElementById('stop-threshold-slider').value = data.stopThreshold;
+                    document.getElementById('stop-threshold-display').textContent = data.stopThreshold;
+                }
+                
+                // 旧設定との互換性
+                if (data.motionThreshold !== undefined && data.startThreshold === undefined) {
+                    document.getElementById('start-threshold-slider').value = data.motionThreshold;
+                    document.getElementById('start-threshold-display').textContent = data.motionThreshold;
+                }
+                
+                // ランプ位置復元
+                if (data.lampPosition) {
+                    document.getElementById('lamp-position').textContent = 
+                        `(${data.lampPosition.x}, ${data.lampPosition.y})`;
+                    document.getElementById('detectBtn').disabled = false;
+                }
+                
+                return data;
+            }
+            
+            saveCurrentMachineSettings(appInstance) {
+                this.saveMachineSettings(this.currentMachine, appInstance);
+            }
+            
+            saveMachineSettings(machineType, appInstance) {
+                try {
+                    const settings = {
+                        vitaOffset: appInstance.vitaOffset,
+                        vitaCycle: appInstance.vitaCycle,
+                        detectionThresholdOffset: appInstance.detectionEngine.detectionThresholdOffset,
+                        detectionRadius: appInstance.detectionEngine.detectionRadius,
+                        maxVitaCount: appInstance.maxVitaCount,
+                        avgFrameCount: appInstance.avgFrameCount,
+                        startThreshold: appInstance.detectionEngine.startThreshold,
+                        stopThreshold: appInstance.detectionEngine.stopThreshold,
+                        lampPosition: appInstance.detectionEngine.lampPosition,
+                        savedAt: new Date().toISOString()
+                    };
+                    
+                    localStorage.setItem(`slotDetectorSettings_${machineType}`, JSON.stringify(settings));
+                    localStorage.setItem('slotDetectorLastMachine', machineType);
+                    
+                    // 視覚的フィードバック
+                    this.showSaveStatus(machineType);
+                    
+                    console.log(`${machineType} 設定保存完了:`, settings);
+                } catch (e) {
+                    console.log('設定保存エラー:', e);
+                }
+            }
+            
+            showSaveStatus(machineType) {
+                const status = document.getElementById('current-status');
+                const originalText = status.textContent;
+                status.textContent = `💾 ${this.getMachineDisplayName(machineType)} 設定保存完了`;
+                status.style.color = '#4CAF50';
+                
+                setTimeout(() => {
+                    status.textContent = originalText;
+                    status.style.color = '';
+                }, 2000);
+            }
+            
+            changeMachine(machineType, callback) {
+                this.currentMachine = machineType;
+                const settings = this.loadMachineSettings(machineType);
+                if (callback) callback(settings);
+                return settings;
+            }
+            
+            getMachineDisplayName(machineType) {
+                return this.machineNames[machineType] || machineType;
+            }
+            
+            updateDisplays() {
+                document.getElementById('offset-display').textContent = 
+                    parseFloat(document.getElementById('timing-offset').value).toFixed(2);
+                document.getElementById('cycle-display').textContent = 
+                    parseFloat(document.getElementById('timing-cycle').value).toFixed(3);
+                document.getElementById('threshold-display').textContent = 
+                    document.getElementById('detection-threshold').value;
+                document.getElementById('radius-display').textContent = 
+                    document.getElementById('detection-radius').value;
+                document.getElementById('vita-limit-display').textContent = 
+                    this.getVitaLimitDisplayText();
+            }
+            
+            getVitaLimitDisplayText() {
+                const maxVitaCount = parseInt(document.getElementById('vita-limit-select').value);
+                if (maxVitaCount === 999) {
+                    return '無制限';
+                } else {
+                    return maxVitaCount + '回';
+                }
+            }
+        }
+
+        class RealtimeLampDetector {
+            constructor() {
+                // Camera Controller の初期化
+                this.cameraController = new CameraController(
+                    document.getElementById('video'),
+                    document.getElementById('canvas')
+                );
+                
+                // 後方互換性のためのプロパティ
+                this.canvas = this.cameraController.canvas;
+                this.ctx = this.cameraController.ctx;
+                
+                // Detection Engine の初期化
+                this.detectionEngine = new DetectionEngine(this.ctx);
+                
+                // Settings Manager の初期化
+                this.settingsManager = new SettingsManager();
+                
+                this.isDetecting = false;
                 
                 // ビタタイミング
                 this.reelStartTime = null;
@@ -691,8 +1249,7 @@
                 // リール動き検出
                 this.frameHistory = [];        // 最大5フレーム保存
                 this.avgFrameCount = 3;        // 平均フレーム数（1-5）
-                this.startThreshold = 30;      // 始動検出闾值
-                this.stopThreshold = 10;       // 停止検出闾値
+                this.detectionEngine.setThresholds(30, 10); // 始動/停止検出闾值
                 this.motionTestActive = false; // テスト状態
                 this.motionTestInterval = null; // テストインターバル
                 this.motionDetectionState = 'waiting'; // 'waiting' -> 'started' -> 'stopping'
@@ -713,30 +1270,68 @@
                 this.lastTapTime = 0;
                 this.tapTimeout = null;
                 
-                // Bluetooth関連
-                this.bluetoothDevice = null;
-                this.bluetoothCharacteristic = null;
-                
-                // 機種別設定
-                this.currentMachine = 'machine1';
+                // Bluetooth Manager の初期化
+                this.bluetoothManager = new BluetoothManager();
+                this.bluetoothManager.setDisconnectedCallback(() => {
+                    const btn = document.getElementById('autoModeBtn');
+                    btn.textContent = '自動モード';
+                    btn.style.background = '#FF5722';
+                    btn.disabled = false;
+                    this.updateStatus('Bluetooth切断');
+                });
                 
                 // 自動モードフラグ
                 this.isAutoMode = false;
                 this.isMotionAutoMode = false; // リール動き検知自動モード
                 
                 // 設定保存機能
-                this.loadSettings();
+                const loadedSettings = this.settingsManager.loadSettings();
+                this.applyLoadedSettings(loadedSettings);
                 
                 this.setupEventListeners();
-                this.updateDisplays();
+                this.settingsManager.updateDisplays();
+            }
+            
+            applyLoadedSettings(settings) {
+                if (settings) {
+                    // Apply settings to the app instance properties
+                    if (settings.vitaOffset !== undefined) this.vitaOffset = settings.vitaOffset;
+                    if (settings.vitaCycle !== undefined) this.vitaCycle = settings.vitaCycle;
+                    if (settings.maxVitaCount !== undefined) this.maxVitaCount = settings.maxVitaCount;
+                    if (settings.avgFrameCount !== undefined) this.avgFrameCount = settings.avgFrameCount;
+                    if (settings.detectionThresholdOffset !== undefined) {
+                        this.detectionEngine.updateThresholdSettings(settings.detectionThresholdOffset);
+                    }
+                    if (settings.detectionRadius !== undefined) {
+                        this.detectionEngine.setDetectionRadius(settings.detectionRadius);
+                    }
+                    if (settings.startThreshold !== undefined && settings.stopThreshold !== undefined) {
+                        this.detectionEngine.setThresholds(settings.startThreshold, settings.stopThreshold);
+                    }
+                    if (settings.lampPosition) {
+                        this.detectionEngine.setLampPosition(settings.lampPosition.x, settings.lampPosition.y);
+                    }
+                }
             }
             
             setupEventListeners() {
+                this.setupBasicControlListeners();
+                this.setupTimingAdjustmentListeners();
+                this.setupDetectionListeners();
+                this.setupUIControlListeners();
+                this.setupMotionDetectionListeners();
+                this.setupAutoModeListeners();
+                this.setupCanvasListeners();
+            }
+            
+            setupBasicControlListeners() {
                 document.getElementById('startBtn').onclick = () => this.startCamera();
                 document.getElementById('setupBtn').onclick = () => this.enterSetupMode();
                 document.getElementById('detectBtn').onclick = () => this.toggleDetection();
                 document.getElementById('resetBtn').onclick = () => this.reset();
-                
+            }
+            
+            setupTimingAdjustmentListeners() {
                 // タイミング調整
                 document.getElementById('timing-offset').onchange = () => this.updateTimingSettings();
                 document.getElementById('timing-cycle').onchange = () => this.updateTimingSettings();
@@ -750,7 +1345,9 @@
                 // 周期調整ボタン
                 document.getElementById('cycle-minus').onclick = () => this.adjustCycle(-0.001);
                 document.getElementById('cycle-plus').onclick = () => this.adjustCycle(0.001);
-                
+            }
+            
+            setupDetectionListeners() {
                 // 閾値調整
                 document.getElementById('detection-threshold').oninput = () => this.updateThresholdSettings();
                 document.getElementById('threshold-minus').onclick = () => this.adjustThreshold(-5);
@@ -760,28 +1357,31 @@
                 document.getElementById('detection-radius').oninput = () => this.updateRadiusSettings();
                 document.getElementById('radius-minus').onclick = () => this.adjustRadius(-2);
                 document.getElementById('radius-plus').onclick = () => this.adjustRadius(2);
-                
-                // UI制御
+            }
+            
+            setupUIControlListeners() {
                 document.getElementById('esp32TestBtn').onclick = () => this.testESP32Connection();
                 document.getElementById('toggleUIBtn').onclick = () => this.toggleUI();
                 document.getElementById('disguiseBtn').onclick = () => this.toggleDisguise();
                 document.getElementById('clockBtn').onclick = () => this.toggleClock();
                 document.getElementById('machine-select').onchange = (e) => this.changeMachine(e.target.value);
-                
-                // ビタ回数制限選択
                 document.getElementById('vita-limit-select').onchange = () => this.updateVitaLimit();
-                
-                // リール動き検出テスト
+            }
+            
+            setupMotionDetectionListeners() {
                 document.getElementById('motion-test-btn').onclick = () => this.toggleMotionTest();
                 document.getElementById('motion-clear-btn').onclick = () => this.clearMotionTest();
                 document.getElementById('avg-frames-slider').oninput = () => this.updateMotionSettings();
                 document.getElementById('start-threshold-slider').oninput = () => this.updateMotionSettings();
                 document.getElementById('stop-threshold-slider').oninput = () => this.updateMotionSettings();
-                
-                // 自動モード
+            }
+            
+            setupAutoModeListeners() {
                 document.getElementById('autoModeBtn').onclick = () => this.connectToBluetooth();
                 document.getElementById('motionAutoModeBtn').onclick = () => this.connectToBluetoothMotion();
-                
+            }
+            
+            setupCanvasListeners() {
                 this.canvas.onclick = (e) => this.onCanvasClick(e);
                 this.canvas.ondblclick = (e) => this.onDoubleClick(e);
             }
@@ -861,32 +1461,17 @@
                 }
                 
                 // ランプ位置マーカー描画
-                if (this.lampPosition) {
-                    this.drawLampMarker();
+                if (this.detectionEngine.lampPosition) {
+                    this.detectionEngine.drawLampMarker(this.canvas);
                 }
                 
                 // 検知処理
-                if (this.isDetecting && this.lampPosition) {
-                    this.detectLampChange();
+                if (this.isDetecting && this.detectionEngine.lampPosition) {
+                    this.detectionEngine.detectLampChange(this.canvas, null, (duration) => {
+                        this.showDetectionAlert();
+                        this.startVitaTiming();
+                    });
                 }
-            }
-            
-            drawLampMarker() {
-                const rect = this.canvas.getBoundingClientRect();
-                const scaleX = this.canvas.width / rect.width;
-                const scaleY = this.canvas.height / rect.height;
-                
-                this.ctx.strokeStyle = this.lampLit ? '#ff0000' : '#00ff00';
-                this.ctx.lineWidth = 3;
-                this.ctx.beginPath();
-                this.ctx.arc(this.lampPosition.x, this.lampPosition.y, this.detectionRadius, 0, 2 * Math.PI);
-                this.ctx.stroke();
-                
-                // 中心点
-                this.ctx.fillStyle = this.lampLit ? '#ff0000' : '#00ff00';
-                this.ctx.beginPath();
-                this.ctx.arc(this.lampPosition.x, this.lampPosition.y, 2, 0, 2 * Math.PI);
-                this.ctx.fill();
             }
             
             onCanvasClick(event) {
@@ -899,11 +1484,11 @@
                 const x = (event.clientX - rect.left) * scaleX;
                 const y = (event.clientY - rect.top) * scaleY;
                 
-                this.lampPosition = { x: Math.round(x), y: Math.round(y) };
-                document.getElementById('lamp-position').textContent = `(${this.lampPosition.x}, ${this.lampPosition.y})`;
+                this.detectionEngine.setLampPosition(Math.round(x), Math.round(y));
+                document.getElementById('lamp-position').textContent = `(${Math.round(x)}, ${Math.round(y)})`;
                 
                 // 設定を保存
-                this.saveCurrentMachineSettings();
+                this.settingsManager.saveCurrentMachineSettings(this);
                 
                 this.updateStatus('ランプ位置設定完了');
                 document.getElementById('setupBtn').classList.remove('active');
@@ -963,92 +1548,21 @@
             }
             
             establishBaseline() {
-                this.brightnessHistory = [];
-                this.baseline = null;
+                const thresholdOffset = parseInt(document.getElementById('detection-threshold').value);
+                this.detectionEngine.updateThresholdSettings(thresholdOffset);
                 
-                // 30フレーム分のベースライン収集
-                const collectBaseline = () => {
-                    if (this.brightnessHistory.length < 30) {
-                        const brightness = this.extractLampBrightness();
-                        this.brightnessHistory.push(brightness);
-                        setTimeout(collectBaseline, 50); // 20FPSで収集
-                    } else {
-                        const mean = this.brightnessHistory.reduce((a, b) => a + b, 0) / this.brightnessHistory.length;
-                        const std = Math.sqrt(this.brightnessHistory.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / this.brightnessHistory.length);
-                        
-                        this.baseline = { mean, std };
-                        this.detectionThresholdOffset = parseInt(document.getElementById('detection-threshold').value);
-                        this.threshold = mean + this.detectionThresholdOffset;
-                        
-                        document.getElementById('baseline').textContent = 
-                            `${mean.toFixed(1)} (閾値: ${this.threshold.toFixed(1)})`;
-                        
-                        this.updateStatus('ベースライン確立完了');
-                    }
-                };
-                collectBaseline();
-            }
-            
-            extractLampBrightness() {
-                if (!this.lampPosition) return 0;
-                
-                const x = this.lampPosition.x;
-                const y = this.lampPosition.y;
-                const radius = this.detectionRadius;
-                
-                // ランプ領域のピクセルデータ取得
-                const imageData = this.ctx.getImageData(
-                    Math.max(0, x - radius),
-                    Math.max(0, y - radius),
-                    Math.min(this.canvas.width, radius * 2),
-                    Math.min(this.canvas.height, radius * 2)
-                );
-                
-                let totalBrightness = 0;
-                let pixelCount = 0;
-                
-                for (let i = 0; i < imageData.data.length; i += 4) {
-                    const r = imageData.data[i];
-                    const g = imageData.data[i + 1];
-                    const b = imageData.data[i + 2];
-                    
-                    // グレースケール変換
-                    const brightness = (r + g + b) / 3;
-                    totalBrightness += brightness;
-                    pixelCount++;
-                }
-                
-                return pixelCount > 0 ? totalBrightness / pixelCount : 0;
-            }
-            
-            detectLampChange() {
-                const currentBrightness = this.extractLampBrightness();
-                
-                // ランプ点灯検知
-                if (!this.lampLit && currentBrightness > this.threshold) {
-                    this.lampLit = true;
-                    this.litStartTime = Date.now();
-                    console.log('ランプ点灯検知:', currentBrightness);
-                    return;
-                }
-                
-                // ランプ消灯検知（リール始動）
-                if (this.lampLit && currentBrightness <= this.baseline.mean * 1.1) {
-                    const duration = (Date.now() - this.litStartTime) / 1000;
-                    console.log('ランプ消灯検知！継続時間:', duration + '秒');
-                    
-                    this.showDetectionAlert();
-                    this.startVitaTiming(); // ビタタイミング開始
-                    this.lampLit = false;
-                    this.litStartTime = null;
-                }
+                this.detectionEngine.establishBaseline(this.canvas, (baseline, threshold) => {
+                    document.getElementById('baseline').textContent = 
+                        `${baseline.mean.toFixed(1)} (閾値: ${threshold.toFixed(1)})`;
+                    this.updateStatus('ベースライン確立完了');
+                });
             }
             
             updateTimingSettings() {
                 this.vitaOffset = parseFloat(document.getElementById('timing-offset').value);
                 this.vitaCycle = parseFloat(document.getElementById('timing-cycle').value);
-                this.updateDisplays();
-                this.saveCurrentMachineSettings(); // 機種別自動保存
+                this.settingsManager.updateDisplays();
+                this.settingsManager.saveCurrentMachineSettings(this); // 機種別自動保存
                 console.log(`タイミング設定: オフセット=${this.vitaOffset}秒, 周期=${this.vitaCycle}秒`);
             }
             
@@ -1116,9 +1630,9 @@
                 
                 // メイン画面の設定も同期
                 document.getElementById('vita-limit-select').value = this.maxVitaCount;
-                this.updateDisplays();
+                this.settingsManager.updateDisplays();
                 this.updateClockVitaLimitDisplay();
-                this.saveCurrentMachineSettings();
+                this.settingsManager.saveCurrentMachineSettings(this);
                 
                 console.log(`時計画面からビタ回数制限変更: ${this.maxVitaCount === 999 ? '無制限' : this.maxVitaCount + '回'}`);
             }
@@ -1152,12 +1666,12 @@
                 const thresholdSlider = document.getElementById('detection-threshold');
                 const newThreshold = parseInt(thresholdSlider.value);
                 
-                if (this.baseline) {
-                    this.threshold = this.baseline.mean + newThreshold;
-                    console.log(`検知閾値更新: ${newThreshold} (実際の閾値: ${this.threshold.toFixed(1)})`);
+                const updatedThreshold = this.detectionEngine.updateThresholdSettings(newThreshold);
+                if (updatedThreshold) {
+                    console.log(`検知閾値更新: ${newThreshold} (実際の閾値: ${updatedThreshold.toFixed(1)})`);
                 }
-                this.updateDisplays();
-                this.saveCurrentMachineSettings(); // 機種別自動保存
+                this.settingsManager.updateDisplays();
+                this.settingsManager.saveCurrentMachineSettings(this); // 機種別自動保存
             }
             
             adjustThreshold(change) {
@@ -1173,8 +1687,8 @@
                 const newRadius = parseInt(radiusSlider.value);
                 
                 this.detectionRadius = newRadius;
-                this.updateDisplays();
-                this.saveCurrentMachineSettings(); // 機種別自動保存
+                this.settingsManager.updateDisplays();
+                this.settingsManager.saveCurrentMachineSettings(this); // 機種別自動保存
                 console.log(`検出範囲更新: ${newRadius}px`);
             }
             
@@ -1202,8 +1716,8 @@
             updateVitaLimit() {
                 const selectedValue = document.getElementById('vita-limit-select').value;
                 this.maxVitaCount = parseInt(selectedValue);
-                this.updateDisplays();
-                this.saveCurrentMachineSettings();
+                this.settingsManager.updateDisplays();
+                this.settingsManager.saveCurrentMachineSettings(this);
                 console.log(`ビタ回数制限更新: ${this.maxVitaCount === 999 ? '無制限' : this.maxVitaCount + '回'}`);
             }
             
@@ -1504,117 +2018,107 @@
             }
             
             async sendESP32Press() {
-                try {
-                    console.log('ESP32にBluetooth経由でPRESSコマンド送信中...');
+                const success = await this.bluetoothManager.sendPress();
+                
+                // 自動モード時は視覚的フィードバックを非表示
+                if (!this.isAutoModeUIHidden) {
+                    const alert = document.getElementById('vita-alert');
+                    alert.style.display = 'block';
                     
-                    if (!this.bluetoothDevice || !this.bluetoothDevice.gatt.connected) {
-                        await this.connectBluetooth();
-                    }
-                    
-                    // BLEでPRESSコマンド送信
-                    const encoder = new TextEncoder();
-                    await this.bluetoothCharacteristic.writeValue(encoder.encode("PRESS"));
-                    
-                    console.log('Bluetooth経由でPRESSコマンド送信完了');
-                    
-                    // 自動モード時は視覚的フィードバックを非表示
-                    if (!this.isAutoModeUIHidden) {
-                        const alert = document.getElementById('vita-alert');
-                        alert.style.display = 'block';
+                    if (success) {
                         alert.style.background = 'rgba(0,255,0,0.9)';
                         alert.textContent = '🎯 Bluetooth自動押下実行！ 🎯';
-                        
                         setTimeout(() => {
                             alert.style.display = 'none';
                         }, 1500);
-                    }
-                    
-                    return true;
-                } catch (error) {
-                    console.error('ESP32 Bluetooth通信エラー:', error);
-                    
-                    // 自動モード時はエラーの視覚的フィードバックも非表示
-                    if (!this.isAutoModeUIHidden) {
-                        const alert = document.getElementById('vita-alert');
-                        alert.style.display = 'block';
+                    } else {
                         alert.style.background = 'rgba(255,100,0,0.9)';
                         alert.textContent = '⚠️ Bluetooth通信エラー ⚠️';
-                        
                         setTimeout(() => {
                             alert.style.display = 'none';
                         }, 2000);
                     }
-                    
-                    return false;
                 }
+                
+                return success;
             }
             
             async connectToBluetooth() {
                 const btn = document.getElementById('autoModeBtn');
                 const originalText = btn.textContent;
+                
+                this.initializeAutoModeUI(btn);
+                
+                try {
+                    this.isAutoMode = true;
+                    await this.startCameraIfNeeded();
+                    await this.connectAndSetupAutoMode(btn);
+                    this.showAutoModeAlert();
+                } catch (error) {
+                    this.handleAutoModeError(btn, originalText, error);
+                }
+            }
+            
+            initializeAutoModeUI(btn) {
                 btn.textContent = '接続中...';
                 btn.disabled = true;
                 btn.style.background = '#ffc107';
+            }
+            
+            async startCameraIfNeeded() {
+                if (!this.stream) {
+                    await this.startCamera();
+                    this.updateStatus('カメラ開始完了');
+                    await this.sleep(1000); // カメラ安定待ち
+                }
+            }
+            
+            async connectAndSetupAutoMode(btn) {
+                await this.bluetoothManager.connect();
+                btn.textContent = '✓ 自動モード';
+                btn.style.background = '#28a745';
                 
-                try {
-                    // 自動モードフラグを設定
-                    this.isAutoMode = true;
-                    
-                    // 先にカメラ開始（ユーザージェスチャー有効時）
-                    if (!this.stream) {
-                        await this.startCamera();
-                        this.updateStatus('カメラ開始完了');
-                        await this.sleep(1000); // カメラ安定待ち
-                    }
-                    
-                    // その後ESP32接続
-                    await this.connectBluetooth();
-                    btn.textContent = '✓ 自動モード';
-                    btn.style.background = '#28a745';
-                    
-                    // カメラ開始完了後にUI非表示
-                    this.hideUIForAutoMode();
-                    
-                    // 自動でランプ位置設定モードに入る
-                    this.enterSetupMode();
-                    this.updateStatus('ESP32接続完了 - ランプをタップして位置を設定してください');
-                    
-                    // 自動モード時は設定案内ポップアップも非表示
-                    if (!this.isAutoModeUIHidden) {
-                        const alert = document.getElementById('vita-alert');
-                        alert.style.display = 'block';
-                        alert.style.background = 'rgba(40,167,69,0.9)';
-                        alert.textContent = '🎯 ランプをタップして設定！';
-                        
-                        setTimeout(() => {
-                            alert.style.display = 'none';
-                        }, 3000);
-                    }
-                    
-                } catch (error) {
-                    btn.textContent = '⚠ 接続失敗';
-                    btn.style.background = '#dc3545';
-                    btn.disabled = false;
-                    this.updateStatus('自動モード失敗: ' + error.message);
-                    
-                    // 失敗時はUI復帰させてエラーを表示
-                    this.uiVisible = true;
-                    this.isAutoModeUIHidden = false;
-                    document.getElementById('controls').style.display = 'block';
-                    document.getElementById('status').style.display = 'block';
-                    
-                    // エラー時の視覚的フィードバック
+                this.hideUIForAutoMode();
+                this.enterSetupMode();
+                this.updateStatus('ESP32接続完了 - ランプをタップして位置を設定してください');
+            }
+            
+            showAutoModeAlert() {
+                if (!this.isAutoModeUIHidden) {
                     const alert = document.getElementById('vita-alert');
                     alert.style.display = 'block';
-                    alert.style.background = 'rgba(220,53,69,0.9)';
-                    alert.textContent = '❌ 自動モード失敗';
+                    alert.style.background = 'rgba(40,167,69,0.9)';
+                    alert.textContent = '🎯 ランプをタップして設定！';
                     
                     setTimeout(() => {
                         alert.style.display = 'none';
-                        btn.textContent = originalText;
-                        btn.style.background = '#FF5722';
                     }, 3000);
                 }
+            }
+            
+            handleAutoModeError(btn, originalText, error) {
+                btn.textContent = '⚠ 接続失敗';
+                btn.style.background = '#dc3545';
+                btn.disabled = false;
+                this.updateStatus('自動モード失敗: ' + error.message);
+                
+                // 失敗時はUI復帰
+                this.uiVisible = true;
+                this.isAutoModeUIHidden = false;
+                document.getElementById('controls').style.display = 'block';
+                document.getElementById('status').style.display = 'block';
+                
+                // エラー時の視覚的フィードバック
+                const alert = document.getElementById('vita-alert');
+                alert.style.display = 'block';
+                alert.style.background = 'rgba(220,53,69,0.9)';
+                alert.textContent = '❌ 自動モード失敗';
+                
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                    btn.textContent = originalText;
+                    btn.style.background = '#FF5722';
+                }, 3000);
             }
             
             hideUIForAutoMode() {
@@ -1642,52 +2146,6 @@
                 return new Promise(resolve => setTimeout(resolve, ms));
             }
             
-            async connectBluetooth() {
-                try {
-                    console.log('Bluetooth接続開始...');
-                    
-                    // Web Bluetooth APIでESP32デバイスを検索
-                    this.bluetoothDevice = await navigator.bluetooth.requestDevice({
-                        filters: [{ name: 'ESP32_SlotBot' }],
-                        optionalServices: ['12345678-1234-1234-1234-123456789abc']
-                    });
-                    
-                    console.log('デバイス選択:', this.bluetoothDevice.name);
-                    
-                    // GATT接続
-                    const server = await this.bluetoothDevice.gatt.connect();
-                    console.log('GATT接続成功');
-                    
-                    // サービス取得
-                    const service = await server.getPrimaryService('12345678-1234-1234-1234-123456789abc');
-                    console.log('サービス取得成功');
-                    
-                    // キャラクタリスティック取得
-                    this.bluetoothCharacteristic = await service.getCharacteristic('87654321-4321-4321-4321-cba987654321');
-                    console.log('キャラクタリスティック取得成功');
-                    
-                    // 切断イベント監視
-                    this.bluetoothDevice.addEventListener('gattserverdisconnected', () => {
-                        console.log('Bluetooth切断');
-                        this.bluetoothDevice = null;
-                        this.bluetoothCharacteristic = null;
-                        
-                        // 切断時にボタンを元に戻す
-                        const btn = document.getElementById('autoModeBtn');
-                        btn.textContent = '自動モード';
-                        btn.style.background = '#FF5722';
-                        btn.disabled = false;
-                        this.updateStatus('Bluetooth切断');
-                    });
-                    
-                    console.log('Bluetooth接続完了');
-                    return true;
-                } catch (error) {
-                    console.error('Bluetooth接続エラー:', error);
-                    throw error;
-                }
-            }
-            
             async connectToBluetoothMotion() {
                 const btn = document.getElementById('motionAutoModeBtn');
                 const originalText = btn.textContent;
@@ -1707,7 +2165,7 @@
                     }
                     
                     // その後ESP32接続
-                    await this.connectBluetooth();
+                    await this.bluetoothManager.connect();
                     btn.textContent = '✓ 動き自動';
                     btn.style.background = '#28a745';
                     
@@ -1886,7 +2344,7 @@
                             document.getElementById('detectBtn').disabled = false;
                         }
                         
-                        this.updateDisplays();
+                        this.settingsManager.updateDisplays();
                         console.log(`${machineType} 設定読み込み完了:`, data);
                     } else {
                         console.log(`${machineType} の設定が見つかりません`);
@@ -1937,7 +2395,7 @@
             
             changeMachine(machineType) {
                 // 現在の設定を保存
-                this.saveCurrentMachineSettings();
+                this.settingsManager.saveCurrentMachineSettings(this);
                 
                 // 新しい機種に切り替え
                 this.currentMachine = machineType;
@@ -2073,7 +2531,7 @@
                 // 指定数のフレームがたまったら動き検出
                 if (this.frameHistory.length >= this.avgFrameCount) {
                     const avgFrame = this.calculateAverageFrame(this.avgFrameCount);
-                    const motionIntensity = this.calculateMotionIntensity(currentFrameData, avgFrame);
+                    const motionIntensity = this.detectionEngine.calculateMotionIntensity(currentFrameData, avgFrame);
                     
                     // リアルタイム表示更新
                     document.getElementById('motion-intensity').textContent = motionIntensity.toFixed(1);
@@ -2127,24 +2585,11 @@
                 return avgFrame;
             }
             
-            calculateMotionIntensity(currentFrame, avgFrame) {
-                let totalDiff = 0;
-                const pixelCount = currentFrame.length;
-                
-                for (let i = 0; i < pixelCount; i += 4) { // RGBAのため4バイトおき
-                    const currentGray = (currentFrame[i] + currentFrame[i+1] + currentFrame[i+2]) / 3;
-                    const avgGray = (avgFrame[i] + avgFrame[i+1] + avgFrame[i+2]) / 3;
-                    totalDiff += Math.abs(currentGray - avgGray);
-                }
-                
-                return totalDiff / (pixelCount / 4); // ピクセル数で平均化
-            }
-            
             onReelMotionDetected(intensity) {
                 console.log(`リール動き検出! 強度: ${intensity.toFixed(1)}`);
                 
                 // リール動き検知自動モード時はビタタイミングで自動押下
-                if (this.isMotionAutoMode && this.bluetoothCharacteristic) {
+                if (this.isMotionAutoMode && this.bluetoothManager.isConnected()) {
                     this.startVitaTiming();
                     return; // 自動モード時はアラート表示をスキップ
                 }
