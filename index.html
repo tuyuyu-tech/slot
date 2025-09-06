@@ -575,7 +575,7 @@
         </div>
         
         <div id="status">
-            <div>v2.18.19</div>
+            <div>v2.18.20</div>
             <div>状態: <span id="current-status">待機中</span></div>
             <div>ランプ位置: <span id="lamp-position">未設定</span></div>
             <div>検知モード: <span id="detection-mode">オフ</span></div>
@@ -2467,12 +2467,12 @@
                 // 設定保存
                 this.saveMachineSettings(this.currentMachine);
                 
-                console.log(`動き検出設定更新: 平均${this.avgFrameCount}フレーム, 始動${this.startThreshold}, 停止${this.stopThreshold}`);
+                console.log(`動き検出設定更新: 平均${this.avgFrameCount}フレーム, 始動${this.detectionEngine.startThreshold}, 停止${this.detectionEngine.stopThreshold}`);
             }
             
             
             detectReelMotion() {
-                if (!this.cameraController.isActive() || !this.lampPosition) return;
+                if (!this.cameraController.isActive() || !this.detectionEngine.lampPosition) return;
                 
                 // 現在フレームを取得
                 this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
@@ -2497,13 +2497,13 @@
                     // 状態に応じた判定
                     if (this.motionDetectionState === 'waiting') {
                         // 始動待ち状態：始動閾値を超えたら始動検知
-                        if (motionIntensity > this.startThreshold) {
+                        if (motionIntensity > this.detectionEngine.startThreshold) {
                             this.motionDetectionState = 'started';
                             this.onReelMotionDetected(motionIntensity);
                         }
                     } else if (this.motionDetectionState === 'started') {
                         // 始動済み状態：停止閾値を下回ったら連続フレームカウント
-                        if (motionIntensity < this.stopThreshold) {
+                        if (motionIntensity < this.detectionEngine.stopThreshold) {
                             this.stopFrameCount++;
                             if (this.stopFrameCount >= 10) {
                                 this.motionDetectionState = 'waiting';
@@ -2519,10 +2519,10 @@
             
             getDetectionAreaPixels() {
                 const imageData = this.ctx.getImageData(
-                    this.lampPosition.x - this.detectionRadius,
-                    this.lampPosition.y - this.detectionRadius,
-                    this.detectionRadius * 2,
-                    this.detectionRadius * 2
+                    this.detectionEngine.lampPosition.x - this.detectionEngine.detectionRadius,
+                    this.detectionEngine.lampPosition.y - this.detectionEngine.detectionRadius,
+                    this.detectionEngine.detectionRadius * 2,
+                    this.detectionEngine.detectionRadius * 2
                 );
                 return imageData.data;
             }
