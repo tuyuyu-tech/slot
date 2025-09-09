@@ -1,0 +1,17 @@
+{
+  "name": "リアルタイムランプ検知 - イヤホンジャック版",
+  "short_name": "ランプ検知🎧",
+  "description": "パチスロのスタートランプ消灯をリアルタイム検知 - イヤホンジャック経由ESP32制御",
+  "start_url": "./headphone-jack.html",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiBmaWxsPSIjMDAwMDAwIiByeD0iMjAiLz4KPGNpcmNsZSBjeD0iOTYiIGN5PSI5NiIgcj0iNDAiIGZpbGw9IiNGRkE1MDAiLz4KPHRleHQgeD0iOTYiIHk9IjEwNSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1zaXplPSIzMCIgZmlsbD0iIzAwMCI+8J+OpzwvdGV4dD4KPHN2Zz4K",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}

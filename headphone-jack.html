@@ -1,0 +1,2247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>リアルタイムランプ検知 - イヤホンジャック版</title>
+    <link rel="manifest" href="manifest-headphone.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ランプ検知">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #video {
+            display: none;
+        }
+        
+        #canvas {
+            max-width: 100vw;
+            max-height: 80vh;
+            border: 2px solid #333;
+            cursor: crosshair;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            max-width: 45vw;
+        }
+        
+        #status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 8px;
+            border-radius: 5px;
+            text-align: right;
+            font-size: 11px;
+            max-width: 45vw;
+        }
+        
+        #detection-result {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,0,0,0.9);
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            display: none;
+            animation: pulse 1s infinite;
+        }
+        
+        #vita-alert {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,255,0,0.9);
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            display: none;
+            animation: vitaPulse 0.5s infinite;
+        }
+        
+        @keyframes vitaPulse {
+            0% { opacity: 1; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.8; transform: translateX(-50%) scale(1.05); }
+            100% { opacity: 1; transform: translateX(-50%) scale(1); }
+        }
+        
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        }
+        
+        /* 時計風偽装画面のCSS */
+        .animated-bg {
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, #0575e6, #021b79, #00d2ff, #3a7bd5, #00d2ff);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            opacity: 0.8;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .disguise-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 60px 80px;
+            box-shadow: 
+                0 25px 60px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
+            50% { transform: translate(-50%, -50%) translateY(-20px); }
+        }
+        
+        .clock-display {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: white;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .time-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .time-value {
+            font-size: 120px;
+            font-weight: 200;
+            line-height: 1;
+            letter-spacing: -4px;
+            position: relative;
+            background: linear-gradient(180deg, #ffffff 0%, rgba(200, 230, 255, 0.9) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .time-label {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-top: 10px;
+            opacity: 0.7;
+            font-weight: 500;
+            color: rgba(200, 230, 255, 0.9);
+        }
+        
+        .separator {
+            font-size: 80px;
+            font-weight: 200;
+            opacity: 0.8;
+            animation: blink 2s ease-in-out infinite;
+            align-self: center;
+            margin-bottom: 30px;
+            color: rgba(200, 230, 255, 0.9);
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.2; }
+        }
+        
+        .date-display {
+            text-align: center;
+            margin-top: 40px;
+            color: white;
+            font-size: 24px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            opacity: 0.9;
+        }
+        
+        .day-of-week {
+            font-size: 18px;
+            margin-bottom: 10px;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: rgba(200, 230, 255, 0.9);
+        }
+        
+        .progress-bar {
+            margin-top: 40px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00c9ff 0%, #92fe9d 100%);
+            border-radius: 2px;
+            transition: width 1s linear;
+            box-shadow: 0 0 20px rgba(0, 201, 255, 0.5);
+        }
+        
+        .offset-control {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 300;
+            letter-spacing: 3px;
+            opacity: 0.3;
+            color: rgba(255, 255, 255, 0.4);
+            user-select: none;
+        }
+        
+        /* 調整値表示 */
+        .adjustment-controls {
+            position: absolute;
+            bottom: 15px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 25px;
+            font-size: 11px;
+            opacity: 0.5;
+            color: rgba(255, 255, 255, 0.6);
+            user-select: none;
+        }
+        
+        .adjustment-left {
+            flex: 1;
+            text-align: left;
+        }
+        
+        .adjustment-center {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .adjustment-right {
+            flex: 1;
+            text-align: right;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .offset-value, .cycle-value, .vita-limit-value {
+            font-family: 'Segoe UI', monospace;
+            display: inline-block;
+        }
+        
+        .vita-limit-value {
+            cursor: pointer;
+            text-align: center;
+            min-width: 20px;
+        }
+        
+        .vita-limit-value:hover {
+            opacity: 0.6;
+        }
+        
+        .lock-icon {
+            font-size: 12px;
+            padding: 4px;
+            border-radius: 3px;
+            transition: all 0.2s ease;
+            min-width: 20px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .lock-icon:hover {
+            opacity: 0.6;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .lock-icon.locked {
+            color: rgba(255, 100, 100, 0.6);
+        }
+        
+        /* 4分割タップエリア */
+        .offset-tap-top-left, .offset-tap-bottom-left,
+        .cycle-tap-top-right, .cycle-tap-bottom-right {
+            position: absolute;
+            width: 25%;
+            height: 50%;
+            z-index: 1001;
+            background: transparent;
+            cursor: pointer;
+            display: none;
+        }
+        
+        .offset-tap-top-left {
+            left: 0;
+            top: 0;
+        }
+        
+        .offset-tap-bottom-left {
+            left: 0;
+            bottom: 0;
+        }
+        
+        .cycle-tap-top-right {
+            right: 0;
+            top: 0;
+            bottom: 60%; /* 下部を除外してロックアイコンとの重複を回避 */
+            height: auto;
+        }
+        
+        .cycle-tap-bottom-right {
+            right: 0;
+            bottom: 40px; /* ロックアイコン領域を除外 */
+            top: 60%;
+            height: auto;
+        }
+        
+        .clock-disguise .offset-tap-top-left,
+        .clock-disguise .offset-tap-bottom-left,
+        .clock-disguise .cycle-tap-top-right,
+        .clock-disguise .cycle-tap-bottom-right,
+        .clock-disguise .lock-tap-bottom {
+            display: block;
+        }
+        
+        .lock-tap-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            z-index: 1003;
+            background: transparent;
+            cursor: pointer;
+            display: none;
+        }
+        
+        .floating-elements {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        
+        .floating-circle {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(100, 200, 255, 0.1) 0%, transparent 70%);
+            animation: floatUp 20s infinite linear;
+        }
+        
+        @keyframes floatUp {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.4;
+            }
+            90% {
+                opacity: 0.4;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .disguise-container {
+                padding: 40px 30px;
+            }
+            
+            .time-value {
+                font-size: 60px;
+            }
+            
+            .separator {
+                font-size: 40px;
+                margin-bottom: 15px;
+            }
+            
+            .date-display {
+                font-size: 18px;
+            }
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .lamp-marker {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #00ff00;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            margin: 1px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+            display: block;
+            width: 100%;
+            margin-bottom: 3px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .info {
+            color: #aaa;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="canvas"></canvas>
+        
+        <div id="controls">
+            <div style="margin-bottom:6px; padding:3px; background:rgba(0,50,100,0.8); border-radius:3px;">
+                <select id="machine-select" style="width:100%; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:2px; font-size:10px;">
+                    <option value="machine1">機種1</option>
+                    <option value="machine2">機種2</option>
+                    <option value="machine3">機種3</option>
+                    <option value="machine4">機種4</option>
+                    <option value="machine5">機種5</option>
+                </select>
+            </div>
+            <button id="startBtn">カメラ開始</button>
+            <button id="setupBtn" disabled>ランプ位置設定</button>
+            <button id="detectBtn" disabled>検知開始</button>
+            <button id="resetBtn">リセット</button>
+            <button id="esp32TestBtn" style="background:#ffc107; color:#000;">ESP32テスト</button>
+            <button id="autoModeBtn" style="background:#FF5722; color:#fff;">自動モード</button>
+            <button id="motionAutoModeBtn" style="background:#9C27B0; color:#fff;">動き自動</button>
+            <button id="toggleUIBtn" style="background:#28a745;">UI切替</button>
+            <button id="disguiseBtn" style="background:#dc3545;">消灯</button>
+            <button id="clockBtn" style="background:#007bff;">時計</button>
+            <div style="margin-top:8px; padding:4px; background:rgba(40,40,40,0.8); border-radius:3px; font-size:10px;">
+                <div style="margin-bottom:4px;">
+                    <div style="margin-bottom:2px;">オフセット: <span id="offset-display">0.00</span>秒</div>
+                    <div style="display:flex; gap:1px; margin-bottom:2px;">
+                        <button type="button" id="offset-minus-big" style="width:18px; padding:1px; font-size:7px;">--</button>
+                        <button type="button" id="offset-minus" style="width:18px; padding:1px; font-size:7px;">-</button>
+                        <input type="number" id="timing-offset" value="0" step="0.01" min="-0.80" max="0.5" style="flex:1; width:25px; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:1px 2px; font-size:9px;">
+                        <button type="button" id="offset-plus" style="width:18px; padding:1px; font-size:7px;">+</button>
+                        <button type="button" id="offset-plus-big" style="width:18px; padding:1px; font-size:7px;">++</button>
+                    </div>
+                </div>
+                <div style="margin-bottom:4px;">
+                    <div style="margin-bottom:2px;">周期: <span id="cycle-display">0.78</span>秒</div>
+                    <div style="display:flex; gap:1px; margin-bottom:2px;">
+                        <button type="button" id="cycle-minus" style="width:18px; padding:1px; font-size:7px;">-</button>
+                        <input type="number" id="timing-cycle" value="0.78" step="0.001" min="0.1" max="2" style="flex:1; width:30px; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:1px 2px; font-size:9px;">
+                        <button type="button" id="cycle-plus" style="width:18px; padding:1px; font-size:7px;">+</button>
+                    </div>
+                </div>
+                <div style="margin-bottom:4px;">
+                    <div style="margin-bottom:2px;">ビタ回数: <span id="vita-limit-display">10回</span></div>
+                    <div style="display:flex; gap:1px; margin-bottom:2px;">
+                        <select id="vita-limit-select" style="flex:1; background:#333; color:#fff; border:1px solid #555; border-radius:2px; padding:1px 2px; font-size:8px;">
+                            <option value="2">2回</option>
+                            <option value="10" selected>10回</option>
+                            <option value="999">無制限</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-top:4px;">
+                    <div style="margin-bottom:2px;">検知閾値: <span id="threshold-display">30</span></div>
+                    <div style="display:flex; gap:2px;">
+                        <button type="button" id="threshold-minus" style="width:20px; padding:2px; font-size:8px;">-</button>
+                        <input type="range" id="detection-threshold" min="10" max="100" value="30" style="flex:1;">
+                        <button type="button" id="threshold-plus" style="width:20px; padding:2px; font-size:8px;">+</button>
+                    </div>
+                </div>
+                <div style="margin-top:4px;">
+                    <div style="margin-bottom:2px;">検出範囲: <span id="radius-display">15</span>px</div>
+                    <div style="display:flex; gap:2px;">
+                        <button type="button" id="radius-minus" style="width:20px; padding:2px; font-size:8px;">-</button>
+                        <input type="range" id="detection-radius" min="5" max="30" value="15" style="flex:1;">
+                        <button type="button" id="radius-plus" style="width:20px; padding:2px; font-size:8px;">+</button>
+                    </div>
+                </div>
+                
+                <!-- リール動き検出テスト -->
+                <div style="margin-top:8px; padding:4px; border:1px solid #555; border-radius:3px; background:#2a2a2a;">
+                    <div style="font-size:8px; color:#ccc; margin-bottom:3px;">🎰 リール動き検出テスト</div>
+                    <div style="display:flex; gap:2px; margin-bottom:3px;">
+                        <button type="button" id="motion-test-btn" style="padding:2px 8px; font-size:7px; background:#444;">テスト開始</button>
+                        <button type="button" id="motion-clear-btn" style="flex:1; padding:2px; font-size:7px; background:#666;">クリア</button>
+                    </div>
+                    <div style="margin-bottom:2px;">
+                        <div style="font-size:7px; margin-bottom:1px;">平均フレーム数: <span id="avg-frames-display">3</span></div>
+                        <input type="range" id="avg-frames-slider" min="1" max="5" value="3" style="width:100%; height:12px;">
+                    </div>
+                    <div style="margin-bottom:2px;">
+                        <div style="font-size:7px; margin-bottom:1px;">始動闾值: <span id="start-threshold-display">30</span></div>
+                        <input type="range" id="start-threshold-slider" min="5" max="100" value="30" style="width:100%; height:12px;">
+                    </div>
+                    <div style="margin-bottom:2px;">
+                        <div style="font-size:7px; margin-bottom:1px;">停止闾值: <span id="stop-threshold-display">10</span></div>
+                        <input type="range" id="stop-threshold-slider" min="1" max="50" value="10" style="width:100%; height:12px;">
+                    </div>
+                    <div style="font-size:7px; color:#888;">動き強度: <span id="motion-intensity">0</span></div>
+                </div>
+                
+                <!-- カメラFPS設定 -->
+                <div style="margin-top:4px; padding:4px; border:1px solid #555; border-radius:3px; background:#2a2a2a;">
+                    <div style="font-size:8px; color:#ccc; margin-bottom:2px;">📹 カメラFPS: 60fps固定</div>
+                </div>
+            </div>
+            <div class="info">
+                解像度: <span id="resolution">-</span><br>
+                描画FPS: <span id="fps">-</span><br>
+                カメラFPS: <span id="camera-fps">-</span>
+            </div>
+        </div>
+        
+        <div id="status">
+            <div>v2.18.14</div>
+            <div>状態: <span id="current-status">待機中</span></div>
+            <div>ランプ位置: <span id="lamp-position">未設定</span></div>
+            <div>検知モード: <span id="detection-mode">オフ</span></div>
+            <div>ベースライン: <span id="baseline">-</span></div>
+            <div>次回ビタ: <span id="next-vita">-</span></div>
+            <div>ビタ回数: <span id="vita-count">0/10</span></div>
+        </div>
+        
+        <div id="detection-result">
+            🚨 ランプ消灯検知！ 🚨
+        </div>
+        
+        <div id="vita-alert">
+            ⚡ ビタタイミング！ ⚡
+        </div>
+        
+        <!-- 偽装画面 -->
+        <div id="disguise-screen" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; z-index:1000; background:#000;">
+            <!-- 真っ暗モード -->
+            <div id="black-disguise" style="display:none; width:100%; height:100%; background:#000;" ondblclick="app.onDoubleClick(event)"></div>
+            
+            <!-- 時計モード -->
+            <div id="clock-disguise" class="clock-disguise" style="display:none; width:100%; height:100%; position:relative;">
+                <div class="animated-bg"></div>
+                <div class="floating-elements" id="floatingElements"></div>
+                
+                <!-- 画面角タップエリア -->
+                <div class="offset-tap-top-left" onclick="app.adjustOffsetFromClock(0.01)"></div>
+                <div class="offset-tap-bottom-left" onclick="app.adjustOffsetFromClock(-0.01)"></div>
+                <div class="cycle-tap-top-right" onclick="app.adjustCycleFromClock(0.001)"></div>
+                <div class="cycle-tap-bottom-right" onclick="app.adjustCycleFromClock(-0.001)"></div>
+                <div class="lock-tap-bottom" onclick="app.toggleLockFromClock()"></div>
+                
+                <div class="disguise-container">
+                <div class="clock-display" ondblclick="app.onDoubleClick(event)">
+                    <div class="time-section">
+                        <div class="time-value" id="disguise-hours">00</div>
+                        <div class="time-label">Hours</div>
+                    </div>
+                    <div class="separator">:</div>
+                    <div class="time-section">
+                        <div class="time-value" id="disguise-minutes">00</div>
+                        <div class="time-label">Minutes</div>
+                    </div>
+                    <div class="separator">:</div>
+                    <div class="time-section">
+                        <div class="time-value" id="disguise-seconds">00</div>
+                        <div class="time-label">Seconds</div>
+                    </div>
+                </div>
+                <div class="date-display">
+                    <div class="day-of-week" id="disguise-dayOfWeek">MONDAY</div>
+                    <div id="disguise-date">January 1, 2024</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="disguise-progressFill"></div>
+                </div>
+                
+                <!-- 調整値表示 -->
+                <div class="adjustment-controls">
+                    <div class="adjustment-left">
+                        <span class="offset-value" id="disguise-offset">O0.00</span>
+                    </div>
+                    <div class="adjustment-center">
+                        <span class="vita-limit-value" id="disguise-vita-limit" onclick="app.toggleVitaLimitFromClock()">10</span>
+                    </div>
+                    <div class="adjustment-right">
+                        <span class="cycle-value" id="disguise-cycle">T0.780</span>
+                        <span class="lock-icon" id="disguise-lock">🔒</span>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class RealtimeLampDetector {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                
+                this.stream = null;
+                this.animationId = null;
+                this.isDetecting = false;
+                
+                // ランプ検知設定
+                this.lampPosition = null;
+                this.detectionRadius = 15;
+                this.brightnessHistory = [];
+                this.baseline = null;
+                this.threshold = null;
+                this.detectionThresholdOffset = 30; // 検知閾値オフセット（調整可能）
+                this.lampLit = false;
+                this.litStartTime = null;
+                
+                // ビタタイミング
+                this.reelStartTime = null;
+                this.vitaCycle = 0.78; // 1周期0.78秒（調整可能）
+                this.vitaOffset = 0; // オフセット秒数（調整可能）
+                this.vitaIntervals = [];
+                this.nextVitaTime = null;
+                
+                // ビタ回数制御
+                this.vitaCount = 0;        // 現在のビタ回数
+                this.maxVitaCount = 10;    // 最大ビタ回数
+                this.vitaStopped = false;  // 停止フラグ
+                
+                // 時計画面ロック
+                this.clockLocked = true;   // 調整ロック状態（初期はロック）
+                
+                // リール動き検出
+                this.frameHistory = [];        // 最大5フレーム保存
+                this.avgFrameCount = 3;        // 平均フレーム数（1-5）
+                this.startThreshold = 30;      // 始動検出闾值
+                this.stopThreshold = 10;       // 停止検出闾値
+                this.motionTestActive = false; // テスト状態
+                this.motionTestInterval = null; // テストインターバル
+                this.motionDetectionState = 'waiting'; // 'waiting' -> 'started' -> 'stopping'
+                this.stopFrameCount = 0;       // 停止フレーム連続カウンター
+                
+                // カメラ設定（60fps固定）
+                
+                // 統計
+                this.frameCount = 0;
+                this.lastFpsUpdate = Date.now();
+                this.currentFps = 0;
+                
+                // UI制御
+                this.uiVisible = true;
+                this.isDisguised = false;
+                this.disguiseMode = 'off'; // 'off', 'black', 'clock'
+                this.isAutoModeUIHidden = false; // 自動モードでUI非表示中かどうか
+                this.lastTapTime = 0;
+                this.tapTimeout = null;
+                
+                // Audio関連
+                this.audioContext = null;
+                this.isAudioConnected = false;
+                
+                // 機種別設定
+                this.currentMachine = 'machine1';
+                
+                // 自動モードフラグ
+                this.isAutoMode = false;
+                this.isMotionAutoMode = false; // リール動き検知自動モード
+                
+                // 設定保存機能
+                this.loadSettings();
+                
+                this.setupEventListeners();
+                this.updateDisplays();
+            }
+            
+            setupEventListeners() {
+                document.getElementById('startBtn').onclick = () => this.startCamera();
+                document.getElementById('setupBtn').onclick = () => this.enterSetupMode();
+                document.getElementById('detectBtn').onclick = () => this.toggleDetection();
+                document.getElementById('resetBtn').onclick = () => this.reset();
+                
+                // タイミング調整
+                document.getElementById('timing-offset').onchange = () => this.updateTimingSettings();
+                document.getElementById('timing-cycle').onchange = () => this.updateTimingSettings();
+                
+                // オフセット調整ボタン
+                document.getElementById('offset-minus-big').onclick = () => this.adjustOffset(-0.1);
+                document.getElementById('offset-minus').onclick = () => this.adjustOffset(-0.01);
+                document.getElementById('offset-plus').onclick = () => this.adjustOffset(0.01);
+                document.getElementById('offset-plus-big').onclick = () => this.adjustOffset(0.1);
+                
+                // 周期調整ボタン
+                document.getElementById('cycle-minus').onclick = () => this.adjustCycle(-0.001);
+                document.getElementById('cycle-plus').onclick = () => this.adjustCycle(0.001);
+                
+                // 閾値調整
+                document.getElementById('detection-threshold').oninput = () => this.updateThresholdSettings();
+                document.getElementById('threshold-minus').onclick = () => this.adjustThreshold(-5);
+                document.getElementById('threshold-plus').onclick = () => this.adjustThreshold(5);
+                
+                // 検出範囲調整
+                document.getElementById('detection-radius').oninput = () => this.updateRadiusSettings();
+                document.getElementById('radius-minus').onclick = () => this.adjustRadius(-2);
+                document.getElementById('radius-plus').onclick = () => this.adjustRadius(2);
+                
+                // UI制御
+                document.getElementById('esp32TestBtn').onclick = () => this.testESP32Connection();
+                document.getElementById('toggleUIBtn').onclick = () => this.toggleUI();
+                document.getElementById('disguiseBtn').onclick = () => this.toggleDisguise();
+                document.getElementById('clockBtn').onclick = () => this.toggleClock();
+                document.getElementById('machine-select').onchange = (e) => this.changeMachine(e.target.value);
+                
+                // ビタ回数制限選択
+                document.getElementById('vita-limit-select').onchange = () => this.updateVitaLimit();
+                
+                // リール動き検出テスト
+                document.getElementById('motion-test-btn').onclick = () => this.toggleMotionTest();
+                document.getElementById('motion-clear-btn').onclick = () => this.clearMotionTest();
+                document.getElementById('avg-frames-slider').oninput = () => this.updateMotionSettings();
+                document.getElementById('start-threshold-slider').oninput = () => this.updateMotionSettings();
+                document.getElementById('stop-threshold-slider').oninput = () => this.updateMotionSettings();
+                
+                // 自動モード
+                document.getElementById('autoModeBtn').onclick = () => this.connectToAudio();
+                document.getElementById('motionAutoModeBtn').onclick = () => this.connectToAudioMotion();
+                
+                this.canvas.onclick = (e) => this.onCanvasClick(e);
+                this.canvas.ondblclick = (e) => this.onDoubleClick(e);
+            }
+            
+            async startCamera() {
+                try {
+                    this.updateStatus('カメラ起動中...');
+                    
+                    const constraints = {
+                        video: {
+                            facingMode: 'environment', // バックカメラ優先
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            frameRate: { ideal: 60, min: 30 } // 60fps固定
+                        }
+                    };
+                    
+                    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    this.video.srcObject = this.stream;
+                    
+                    this.video.onloadedmetadata = () => {
+                        // キャンバスサイズ調整
+                        const aspectRatio = this.video.videoWidth / this.video.videoHeight;
+                        const maxWidth = window.innerWidth * 0.9;
+                        const maxHeight = window.innerHeight * 0.8;
+                        
+                        if (maxWidth / aspectRatio <= maxHeight) {
+                            this.canvas.width = this.video.videoWidth;
+                            this.canvas.height = this.video.videoHeight;
+                            this.canvas.style.width = maxWidth + 'px';
+                            this.canvas.style.height = (maxWidth / aspectRatio) + 'px';
+                        } else {
+                            this.canvas.width = this.video.videoWidth;
+                            this.canvas.height = this.video.videoHeight;
+                            this.canvas.style.width = (maxHeight * aspectRatio) + 'px';
+                            this.canvas.style.height = maxHeight + 'px';
+                        }
+                        
+                        document.getElementById('resolution').textContent = 
+                            `${this.video.videoWidth}x${this.video.videoHeight}`;
+                        
+                        this.startVideoLoop();
+                        this.updateStatus('カメラ起動完了');
+                        
+                        document.getElementById('startBtn').disabled = true;
+                        document.getElementById('setupBtn').disabled = false;
+                    };
+                } catch (error) {
+                    console.error('カメラエラー:', error);
+                    alert('カメラにアクセスできません: ' + error.message);
+                    this.updateStatus('カメラエラー');
+                }
+            }
+            
+            startVideoLoop() {
+                const loop = () => {
+                    if (this.video.readyState >= 2) {
+                        this.processFrame();
+                    }
+                    this.animationId = requestAnimationFrame(loop);
+                };
+                loop();
+            }
+            
+            processFrame() {
+                // フレーム描画
+                this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                
+                // FPS計算
+                this.frameCount++;
+                const now = Date.now();
+                if (now - this.lastFpsUpdate >= 1000) {
+                    this.currentFps = Math.round(this.frameCount * 1000 / (now - this.lastFpsUpdate));
+                    document.getElementById('fps').textContent = this.currentFps;
+                    this.frameCount = 0;
+                    this.lastFpsUpdate = now;
+                }
+                
+                // ランプ位置マーカー描画
+                if (this.lampPosition) {
+                    this.drawLampMarker();
+                }
+                
+                // 検知処理
+                if (this.isDetecting && this.lampPosition) {
+                    this.detectLampChange();
+                }
+            }
+            
+            drawLampMarker() {
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                
+                this.ctx.strokeStyle = this.lampLit ? '#ff0000' : '#00ff00';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.arc(this.lampPosition.x, this.lampPosition.y, this.detectionRadius, 0, 2 * Math.PI);
+                this.ctx.stroke();
+                
+                // 中心点
+                this.ctx.fillStyle = this.lampLit ? '#ff0000' : '#00ff00';
+                this.ctx.beginPath();
+                this.ctx.arc(this.lampPosition.x, this.lampPosition.y, 2, 0, 2 * Math.PI);
+                this.ctx.fill();
+            }
+            
+            onCanvasClick(event) {
+                if (!document.getElementById('setupBtn').classList.contains('active')) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                
+                const x = (event.clientX - rect.left) * scaleX;
+                const y = (event.clientY - rect.top) * scaleY;
+                
+                this.lampPosition = { x: Math.round(x), y: Math.round(y) };
+                document.getElementById('lamp-position').textContent = `(${this.lampPosition.x}, ${this.lampPosition.y})`;
+                
+                // 設定を保存
+                this.saveCurrentMachineSettings();
+                
+                this.updateStatus('ランプ位置設定完了');
+                document.getElementById('setupBtn').classList.remove('active');
+                document.getElementById('detectBtn').disabled = false;
+                
+                // ベースライン確立
+                this.establishBaseline();
+                
+                // 自動モード時は検知開始まで自動実行
+                if (this.isAutoMode) {
+                    setTimeout(() => {
+                        this.toggleDetection(); // 検知開始
+                        this.updateStatus('自動モード - 検知開始完了！');
+                        
+                        // 自動モード時は準備完了アラートも非表示
+                        if (!this.isAutoModeUIHidden) {
+                            const alert = document.getElementById('vita-alert');
+                            alert.style.display = 'block';
+                            alert.style.background = 'rgba(40,167,69,0.9)';
+                            alert.textContent = '🎯 準備完了！ランプ消灯を待機中';
+                            
+                            setTimeout(() => {
+                                alert.style.display = 'none';
+                            }, 2000);
+                        }
+                    }, 2000); // ベースライン確立待ち
+                }
+                
+                // 動き検知自動モード時は動き検出開始
+                if (this.isMotionAutoMode) {
+                    // ランプ位置設定完了時にUI非表示（動き自動専用）
+                    this.hideUIForMotionAutoMode();
+                    
+                    setTimeout(() => {
+                        this.toggleMotionTest(); // 動き検出開始
+                        this.updateStatus('動き検知自動モード - 動作開始！');
+                        
+                        // 準備完了アラート表示
+                        if (!this.isAutoModeUIHidden) {
+                            const alert = document.getElementById('vita-alert');
+                            alert.style.display = 'block';
+                            alert.style.background = 'rgba(156,39,176,0.9)'; // 紫色
+                            alert.textContent = '🎰 準備完了！リール動きを待機中';
+                            
+                            setTimeout(() => {
+                                alert.style.display = 'none';
+                            }, 2000);
+                        }
+                    }, 1000); // 動き検出はベースライン不要なので短縮
+                }
+            }
+            
+            enterSetupMode() {
+                document.getElementById('setupBtn').classList.add('active');
+                document.getElementById('setupBtn').style.background = '#28a745';
+                this.updateStatus('ランプをタップして位置を設定してください');
+            }
+            
+            establishBaseline() {
+                this.brightnessHistory = [];
+                this.baseline = null;
+                
+                // 30フレーム分のベースライン収集
+                const collectBaseline = () => {
+                    if (this.brightnessHistory.length < 30) {
+                        const brightness = this.extractLampBrightness();
+                        this.brightnessHistory.push(brightness);
+                        setTimeout(collectBaseline, 50); // 20FPSで収集
+                    } else {
+                        const mean = this.brightnessHistory.reduce((a, b) => a + b, 0) / this.brightnessHistory.length;
+                        const std = Math.sqrt(this.brightnessHistory.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / this.brightnessHistory.length);
+                        
+                        this.baseline = { mean, std };
+                        this.detectionThresholdOffset = parseInt(document.getElementById('detection-threshold').value);
+                        this.threshold = mean + this.detectionThresholdOffset;
+                        
+                        document.getElementById('baseline').textContent = 
+                            `${mean.toFixed(1)} (閾値: ${this.threshold.toFixed(1)})`;
+                        
+                        this.updateStatus('ベースライン確立完了');
+                    }
+                };
+                collectBaseline();
+            }
+            
+            extractLampBrightness() {
+                if (!this.lampPosition) return 0;
+                
+                const x = this.lampPosition.x;
+                const y = this.lampPosition.y;
+                const radius = this.detectionRadius;
+                
+                // ランプ領域のピクセルデータ取得
+                const imageData = this.ctx.getImageData(
+                    Math.max(0, x - radius),
+                    Math.max(0, y - radius),
+                    Math.min(this.canvas.width, radius * 2),
+                    Math.min(this.canvas.height, radius * 2)
+                );
+                
+                let totalBrightness = 0;
+                let pixelCount = 0;
+                
+                for (let i = 0; i < imageData.data.length; i += 4) {
+                    const r = imageData.data[i];
+                    const g = imageData.data[i + 1];
+                    const b = imageData.data[i + 2];
+                    
+                    // グレースケール変換
+                    const brightness = (r + g + b) / 3;
+                    totalBrightness += brightness;
+                    pixelCount++;
+                }
+                
+                return pixelCount > 0 ? totalBrightness / pixelCount : 0;
+            }
+            
+            detectLampChange() {
+                const currentBrightness = this.extractLampBrightness();
+                
+                // ランプ点灯検知
+                if (!this.lampLit && currentBrightness > this.threshold) {
+                    this.lampLit = true;
+                    this.litStartTime = Date.now();
+                    console.log('ランプ点灯検知:', currentBrightness);
+                    return;
+                }
+                
+                // ランプ消灯検知（リール始動）
+                if (this.lampLit && currentBrightness <= this.baseline.mean * 1.1) {
+                    const duration = (Date.now() - this.litStartTime) / 1000;
+                    console.log('ランプ消灯検知！継続時間:', duration + '秒');
+                    
+                    this.showDetectionAlert();
+                    this.startVitaTiming(); // ビタタイミング開始
+                    this.lampLit = false;
+                    this.litStartTime = null;
+                }
+            }
+            
+            updateTimingSettings() {
+                this.vitaOffset = parseFloat(document.getElementById('timing-offset').value);
+                this.vitaCycle = parseFloat(document.getElementById('timing-cycle').value);
+                this.updateDisplays();
+                this.saveCurrentMachineSettings(); // 機種別自動保存
+                console.log(`タイミング設定: オフセット=${this.vitaOffset}秒, 周期=${this.vitaCycle}秒`);
+            }
+            
+            adjustOffset(change) {
+                const offsetInput = document.getElementById('timing-offset');
+                const currentValue = parseFloat(offsetInput.value);
+                const newValue = Math.max(-0.80, Math.min(0.5, currentValue + change));
+                offsetInput.value = newValue.toFixed(2);
+                this.updateTimingSettings();
+            }
+            
+            adjustOffsetFromClock(change) {
+                if (this.clockLocked) return;
+                this.adjustOffset(change);
+                this.updateClockDisplays();
+            }
+            
+            adjustCycleFromClock(change) {
+                if (this.clockLocked) return;
+                this.adjustCycle(change);
+                this.updateClockDisplays();
+            }
+            
+            updateClockDisplays() {
+                this.updateClockOffsetDisplay();
+                this.updateClockCycleDisplay();
+                this.updateClockVitaLimitDisplay();
+            }
+            
+            updateClockOffsetDisplay() {
+                const offsetValue = parseFloat(document.getElementById('timing-offset').value);
+                document.getElementById('disguise-offset').textContent = 'O' + offsetValue.toFixed(2);
+            }
+            
+            updateClockCycleDisplay() {
+                const cycleValue = parseFloat(document.getElementById('timing-cycle').value);
+                document.getElementById('disguise-cycle').textContent = 'T' + cycleValue.toFixed(3);
+            }
+            
+            updateClockVitaLimitDisplay() {
+                let displayText;
+                if (this.maxVitaCount === 2) {
+                    displayText = '2';
+                } else if (this.maxVitaCount === 10) {
+                    displayText = '10';
+                } else if (this.maxVitaCount === 999) {
+                    displayText = '∞';
+                } else {
+                    displayText = this.maxVitaCount.toString();
+                }
+                document.getElementById('disguise-vita-limit').textContent = displayText;
+            }
+            
+            toggleVitaLimitFromClock() {
+                if (this.clockLocked) return;
+                
+                // 2 → 10 → ∞ → 2 のサイクル
+                if (this.maxVitaCount === 2) {
+                    this.maxVitaCount = 10;
+                } else if (this.maxVitaCount === 10) {
+                    this.maxVitaCount = 999;
+                } else {
+                    this.maxVitaCount = 2;
+                }
+                
+                // メイン画面の設定も同期
+                document.getElementById('vita-limit-select').value = this.maxVitaCount;
+                this.updateDisplays();
+                this.updateClockVitaLimitDisplay();
+                this.saveCurrentMachineSettings();
+                
+                console.log(`時計画面からビタ回数制限変更: ${this.maxVitaCount === 999 ? '無制限' : this.maxVitaCount + '回'}`);
+            }
+            
+            toggleLockFromClock() {
+                this.clockLocked = !this.clockLocked;
+                
+                const lockIcon = document.getElementById('disguise-lock');
+                const lockElement = document.querySelector('.lock-icon');
+                
+                if (this.clockLocked) {
+                    lockIcon.textContent = '🔒'; // ロック状態
+                    lockElement.classList.add('locked');
+                } else {
+                    lockIcon.textContent = '🔓'; // アンロック状態
+                    lockElement.classList.remove('locked');
+                }
+                
+                console.log(`時計画面ロック: ${this.clockLocked ? 'ロック' : 'アンロック'}`);
+            }
+            
+            adjustCycle(change) {
+                const cycleInput = document.getElementById('timing-cycle');
+                const currentValue = parseFloat(cycleInput.value);
+                const newValue = Math.max(0.1, Math.min(2.0, currentValue + change));
+                cycleInput.value = newValue.toFixed(3);
+                this.updateTimingSettings();
+            }
+            
+            updateThresholdSettings() {
+                const thresholdSlider = document.getElementById('detection-threshold');
+                const newThreshold = parseInt(thresholdSlider.value);
+                
+                if (this.baseline) {
+                    this.threshold = this.baseline.mean + newThreshold;
+                    console.log(`検知閾値更新: ${newThreshold} (実際の閾値: ${this.threshold.toFixed(1)})`);
+                }
+                this.updateDisplays();
+                this.saveCurrentMachineSettings(); // 機種別自動保存
+            }
+            
+            adjustThreshold(change) {
+                const thresholdSlider = document.getElementById('detection-threshold');
+                const currentValue = parseInt(thresholdSlider.value);
+                const newValue = Math.max(10, Math.min(100, currentValue + change));
+                thresholdSlider.value = newValue;
+                this.updateThresholdSettings();
+            }
+            
+            updateRadiusSettings() {
+                const radiusSlider = document.getElementById('detection-radius');
+                const newRadius = parseInt(radiusSlider.value);
+                
+                this.detectionRadius = newRadius;
+                this.updateDisplays();
+                this.saveCurrentMachineSettings(); // 機種別自動保存
+                console.log(`検出範囲更新: ${newRadius}px`);
+            }
+            
+            adjustRadius(change) {
+                const radiusSlider = document.getElementById('detection-radius');
+                const currentValue = parseInt(radiusSlider.value);
+                const newValue = Math.max(5, Math.min(30, currentValue + change));
+                radiusSlider.value = newValue;
+                this.updateRadiusSettings();
+            }
+            
+            updateDisplays() {
+                document.getElementById('offset-display').textContent = 
+                    parseFloat(document.getElementById('timing-offset').value).toFixed(2);
+                document.getElementById('cycle-display').textContent = 
+                    parseFloat(document.getElementById('timing-cycle').value).toFixed(3);
+                document.getElementById('threshold-display').textContent = 
+                    document.getElementById('detection-threshold').value;
+                document.getElementById('radius-display').textContent = 
+                    document.getElementById('detection-radius').value;
+                document.getElementById('vita-limit-display').textContent = 
+                    this.getVitaLimitDisplayText();
+            }
+            
+            updateVitaLimit() {
+                const selectedValue = document.getElementById('vita-limit-select').value;
+                this.maxVitaCount = parseInt(selectedValue);
+                this.updateDisplays();
+                this.saveCurrentMachineSettings();
+                console.log(`ビタ回数制限更新: ${this.maxVitaCount === 999 ? '無制限' : this.maxVitaCount + '回'}`);
+            }
+            
+            getVitaLimitDisplayText() {
+                if (this.maxVitaCount === 999) {
+                    return '無制限';
+                } else {
+                    return this.maxVitaCount + '回';
+                }
+            }
+            
+            toggleUI() {
+                this.uiVisible = !this.uiVisible;
+                const controls = document.getElementById('controls');
+                const status = document.getElementById('status');
+                
+                if (this.uiVisible) {
+                    controls.style.display = 'block';
+                    status.style.display = 'block';
+                } else {
+                    controls.style.display = 'none';
+                    status.style.display = 'none';
+                }
+            }
+            
+            toggleDisguise() {
+                const disguiseScreen = document.getElementById('disguise-screen');
+                const blackDisguise = document.getElementById('black-disguise');
+                const clockDisguise = document.getElementById('clock-disguise');
+                const btn = document.getElementById('disguiseBtn');
+                
+                // 真っ暗モードのON/OFF切り替え
+                if (this.disguiseMode === 'black') {
+                    // 真っ暗モードを解除
+                    this.disguiseMode = 'off';
+                    this.isDisguised = false;
+                    disguiseScreen.style.display = 'none';
+                    blackDisguise.style.display = 'none';
+                    btn.textContent = '消灯';
+                    btn.style.background = '#dc3545';
+                } else {
+                    // 時計モードが有効な場合は先に解除
+                    if (this.disguiseMode === 'clock') {
+                        clockDisguise.style.display = 'none';
+                        disguiseClock.stop();
+                        document.getElementById('clockBtn').textContent = '時計';
+                        document.getElementById('clockBtn').style.background = '#007bff';
+                    }
+                    // 真っ暗モードを有効
+                    this.disguiseMode = 'black';
+                    this.isDisguised = true;
+                    disguiseScreen.style.display = 'block';
+                    blackDisguise.style.display = 'block';
+                    clockDisguise.style.display = 'none';
+                    btn.textContent = '復帰';
+                    btn.style.background = '#28a745';
+                }
+            }
+            
+            toggleClock() {
+                const disguiseScreen = document.getElementById('disguise-screen');
+                const blackDisguise = document.getElementById('black-disguise');
+                const clockDisguise = document.getElementById('clock-disguise');
+                const btn = document.getElementById('clockBtn');
+                
+                // 時計モードのON/OFF切り替え
+                if (this.disguiseMode === 'clock') {
+                    // 時計モードを解除
+                    this.disguiseMode = 'off';
+                    this.isDisguised = false;
+                    disguiseScreen.style.display = 'none';
+                    clockDisguise.style.display = 'none';
+                    btn.textContent = '時計';
+                    btn.style.background = '#007bff';
+                    disguiseClock.stop();
+                } else {
+                    // 真っ暗モードが有効な場合は先に解除
+                    if (this.disguiseMode === 'black') {
+                        blackDisguise.style.display = 'none';
+                        document.getElementById('disguiseBtn').textContent = '消灯';
+                        document.getElementById('disguiseBtn').style.background = '#dc3545';
+                    }
+                    // 時計モードを有効
+                    this.disguiseMode = 'clock';
+                    this.isDisguised = true;
+                    disguiseScreen.style.display = 'block';
+                    blackDisguise.style.display = 'none';
+                    clockDisguise.style.display = 'block';
+                    btn.textContent = '復帰';
+                    btn.style.background = '#28a745';
+                    disguiseClock.start();
+                }
+            }
+            
+            async testESP32Connection() {
+                const btn = document.getElementById('esp32TestBtn');
+                btn.textContent = '送信中...';
+                btn.disabled = true;
+                
+                const success = await this.sendAudioSignal();
+                
+                // ボタン状態を結果に応じて更新
+                setTimeout(() => {
+                    if (success) {
+                        btn.textContent = 'ESP32テスト';
+                        btn.style.background = '#28a745'; // 緑色
+                    } else {
+                        btn.textContent = 'ESP32テスト';
+                        btn.style.background = '#dc3545'; // 赤色
+                    }
+                    btn.disabled = false;
+                    
+                    // 3秒後に元の色に戻す
+                    setTimeout(() => {
+                        btn.style.background = '#ffc107'; // 元の黄色
+                    }, 3000);
+                }, 1000);
+            }
+            
+            onDoubleClick(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // UI非表示または偽装中の場合の処理
+                if (this.isAutoModeUIHidden) {
+                    // 自動モード時は時計画面に遷移
+                    this.toggleClock();
+                } else if (!this.uiVisible) {
+                    // 通常のUI非表示時は復帰
+                    this.uiVisible = true;
+                    document.getElementById('controls').style.display = 'block';
+                    document.getElementById('status').style.display = 'block';
+                } else if (this.isDisguised) {
+                    // 偽装画面から復帰
+                    this.disguiseMode = 'off';
+                    this.isDisguised = false;
+                    document.getElementById('disguise-screen').style.display = 'none';
+                    document.getElementById('black-disguise').style.display = 'none';
+                    document.getElementById('clock-disguise').style.display = 'none';
+                    
+                    // 両方のボタンを元に戻す
+                    const disguiseBtn = document.getElementById('disguiseBtn');
+                    const clockBtn = document.getElementById('clockBtn');
+                    disguiseBtn.textContent = '消灯';
+                    disguiseBtn.style.background = '#dc3545';
+                    clockBtn.textContent = '時計';
+                    clockBtn.style.background = '#007bff';
+                    
+                    // 時計を停止
+                    disguiseClock.stop();
+                }
+            }
+            
+            startVitaTiming() {
+                this.reelStartTime = Date.now();
+                this.vitaIntervals.forEach(interval => clearInterval(interval));
+                this.vitaIntervals = [];
+                
+                // ビタ回数カウンターリセット
+                this.vitaCount = 0;
+                this.vitaStopped = false;
+                
+                console.log(`ビタタイミング開始: オフセット=${this.vitaOffset}秒, 周期=${this.vitaCycle}秒, 最大${this.maxVitaCount}回`);
+                this.scheduleNextVita();
+            }
+            
+            scheduleNextVita() {
+                // 次のビタタイミングを計算
+                let cycleNumber = 1;
+                const scheduleVita = () => {
+                    const vitaTime = this.reelStartTime + (this.vitaOffset * 1000) + (cycleNumber * this.vitaCycle * 1000);
+                    const now = Date.now();
+                    const delay = vitaTime - now;
+                    
+                    if (delay > 0) {
+                        // カウントダウン表示を更新
+                        this.updateVitaCountdown(cycleNumber);
+                        
+                        const timeoutId = setTimeout(() => {
+                            this.showVitaAlert(cycleNumber);
+                            cycleNumber++;
+                            scheduleVita(); // 次のサイクルをスケジュール
+                        }, delay);
+                        
+                        // タイムアウトIDを保存（リセット時にクリア用）
+                        this.vitaIntervals.push(timeoutId);
+                    }
+                };
+                scheduleVita();
+            }
+            
+            updateVitaCountdown(cycleNumber) {
+                const updateCountdown = () => {
+                    if (!this.reelStartTime) return;
+                    
+                    const now = Date.now();
+                    const nextVitaTime = this.reelStartTime + (this.vitaOffset * 1000) + (cycleNumber * this.vitaCycle * 1000);
+                    const remaining = (nextVitaTime - now) / 1000;
+                    
+                    if (remaining > 0) {
+                        document.getElementById('next-vita').textContent = 
+                            `${cycleNumber}周目 ${remaining.toFixed(1)}秒`;
+                        setTimeout(updateCountdown, 100);
+                    } else {
+                        document.getElementById('next-vita').textContent = '-';
+                    }
+                };
+                updateCountdown();
+            }
+            
+            showVitaAlert(cycleNumber) {
+                // ビタ回数更新
+                this.vitaCount = cycleNumber;
+                
+                // ビタ回数制限チェック
+                if (this.maxVitaCount !== 999 && this.vitaCount > this.maxVitaCount) {
+                    this.vitaStopped = true;
+                    
+                    // 停止通知（自動モード時は非表示）
+                    if (!this.isAutoModeUIHidden) {
+                        const alert = document.getElementById('vita-alert');
+                        alert.textContent = `🛑 ${this.maxVitaCount}回完了 - 次のスタートまで待機`;
+                        alert.style.background = 'rgba(255,165,0,0.9)';
+                        alert.style.display = 'block';
+                        
+                        setTimeout(() => {
+                            alert.style.display = 'none';
+                        }, 3000);
+                    }
+                    
+                    console.log(`ビタタイミング停止: ${this.maxVitaCount}回完了`);
+                    return; // ESP32送信をスキップ
+                }
+                
+                // 通常のビタタイミング処理
+                if (!this.isAutoModeUIHidden) {
+                    const alert = document.getElementById('vita-alert');
+                    alert.textContent = `⚡ ${cycleNumber}/${this.maxVitaCount}回目 ビタタイミング！ ⚡`;
+                    alert.style.background = 'rgba(0,255,0,0.9)';
+                    alert.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        alert.style.display = 'none';
+                    }, 1000);
+                }
+                
+                // 高音のビープ音
+                this.playVitaBeep();
+                
+                // ESP32に自動PRESSコマンド送信
+                this.sendAudioSignal();
+                
+                console.log(`ビタタイミング実行: ${cycleNumber}/${this.maxVitaCount}回目`);
+                
+                // UI更新
+                this.updateVitaCountDisplay();
+            }
+            
+            updateVitaCountDisplay() {
+                const maxText = this.maxVitaCount === 999 ? '∞' : this.maxVitaCount;
+                document.getElementById('vita-count').textContent = `${this.vitaCount}/${maxText}`;
+            }
+            
+            playVitaBeep() {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(1200, audioContext.currentTime); // 高音
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.1); // 短いビープ
+                } catch (e) {
+                    console.log('音声再生不可:', e);
+                }
+            }
+            
+            showDetectionAlert() {
+                // 自動モード時は消灯検知アラートも非表示
+                if (!this.isAutoModeUIHidden) {
+                    const alert = document.getElementById('detection-result');
+                    alert.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        alert.style.display = 'none';
+                    }, 3000);
+                }
+                
+                // 音声アラートは自動モードでも再生
+                if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
+                    this.playBeep();
+                }
+            }
+            
+            async sendAudioSignal() {
+                try {
+                    console.log('ESP32にオーディオ信号でPRESSコマンド送信中...');
+                    
+                    if (!this.audioContext) {
+                        await this.connectAudio();
+                    }
+                    
+                    // 1kHz信号を100ms送信
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(1000, this.audioContext.currentTime); // 1kHz
+                    gainNode.gain.setValueAtTime(0.5, this.audioContext.currentTime);
+                    
+                    oscillator.start();
+                    setTimeout(() => oscillator.stop(), 100); // 100ms信号
+                    
+                    console.log('オーディオ信号でPRESSコマンド送信完了');
+                    
+                    // 自動モード時は視覚的フィードバックを非表示
+                    if (!this.isAutoModeUIHidden) {
+                        const alert = document.getElementById('vita-alert');
+                        alert.style.display = 'block';
+                        alert.style.background = 'rgba(0,255,0,0.9)';
+                        alert.textContent = '🎯 オーディオ自動押下実行！ 🎯';
+                        
+                        setTimeout(() => {
+                            alert.style.display = 'none';
+                        }, 1500);
+                    }
+                    
+                    return true;
+                } catch (error) {
+                    console.error('ESP32 オーディオ通信エラー:', error);
+                    
+                    // 自動モード時はエラーの視覚的フィードバックも非表示
+                    if (!this.isAutoModeUIHidden) {
+                        const alert = document.getElementById('vita-alert');
+                        alert.style.display = 'block';
+                        alert.style.background = 'rgba(255,100,0,0.9)';
+                        alert.textContent = '⚠️ オーディオ通信エラー ⚠️';
+                        
+                        setTimeout(() => {
+                            alert.style.display = 'none';
+                        }, 2000);
+                    }
+                    
+                    return false;
+                }
+            }
+            
+            async connectToAudio() {
+                const btn = document.getElementById('autoModeBtn');
+                const originalText = btn.textContent;
+                btn.textContent = '接続中...';
+                btn.disabled = true;
+                btn.style.background = '#ffc107';
+                
+                try {
+                    // 自動モードフラグを設定
+                    this.isAutoMode = true;
+                    
+                    // 先にカメラ開始（ユーザージェスチャー有効時）
+                    if (!this.stream) {
+                        await this.startCamera();
+                        this.updateStatus('カメラ開始完了');
+                        await this.sleep(1000); // カメラ安定待ち
+                    }
+                    
+                    // オーディオコンテキスト初期化
+                    await this.connectAudio();
+                    btn.textContent = '✓ 自動モード';
+                    btn.style.background = '#28a745';
+                    
+                    // カメラ開始完了後にUI非表示
+                    this.hideUIForAutoMode();
+                    
+                    // 自動でランプ位置設定モードに入る
+                    this.enterSetupMode();
+                    this.updateStatus('オーディオ接続完了 - ランプをタップして位置を設定してください');
+                    
+                    // 自動モード時は設定案内ポップアップも非表示
+                    if (!this.isAutoModeUIHidden) {
+                        const alert = document.getElementById('vita-alert');
+                        alert.style.display = 'block';
+                        alert.style.background = 'rgba(40,167,69,0.9)';
+                        alert.textContent = '🎯 ランプをタップして設定！';
+                        
+                        setTimeout(() => {
+                            alert.style.display = 'none';
+                        }, 3000);
+                    }
+                    
+                } catch (error) {
+                    btn.textContent = '⚠ 接続失敗';
+                    btn.style.background = '#dc3545';
+                    btn.disabled = false;
+                    this.updateStatus('自動モード失敗: ' + error.message);
+                    
+                    // 失敗時はUI復帰させてエラーを表示
+                    this.uiVisible = true;
+                    this.isAutoModeUIHidden = false;
+                    document.getElementById('controls').style.display = 'block';
+                    document.getElementById('status').style.display = 'block';
+                    
+                    // エラー時の視覚的フィードバック
+                    const alert = document.getElementById('vita-alert');
+                    alert.style.display = 'block';
+                    alert.style.background = 'rgba(220,53,69,0.9)';
+                    alert.textContent = '❌ 自動モード失敗';
+                    
+                    setTimeout(() => {
+                        alert.style.display = 'none';
+                        btn.textContent = originalText;
+                        btn.style.background = '#FF5722';
+                    }, 3000);
+                }
+            }
+            
+            hideUIForAutoMode() {
+                // コントロールパネルとステータスを非表示
+                document.getElementById('controls').style.display = 'none';
+                document.getElementById('status').style.display = 'none';
+                this.uiVisible = false;
+                
+                // 自動モードでUI非表示中であることを示すフラグ
+                this.isAutoModeUIHidden = true;
+            }
+            
+            hideUIForMotionAutoMode() {
+                // 動き自動モード用：通常の自動モードと同じUI完全非表示
+                document.getElementById('controls').style.display = 'none';
+                document.getElementById('status').style.display = 'none';
+                this.uiVisible = false;
+                
+                // 自動モードでUI非表示中であることを示すフラグ
+                this.isAutoModeUIHidden = true;
+            }
+            
+            // ユーティリティ関数
+            sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+            
+            async connectAudio() {
+                try {
+                    console.log('オーディオコンテキスト初期化開始...');
+                    
+                    // Web Audio API初期化
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.isAudioConnected = true;
+                    
+                    console.log('オーディオコンテキスト初期化完了');
+                    return true;
+                } catch (error) {
+                    console.error('オーディオ接続エラー:', error);
+                    throw error;
+                }
+            }
+            
+            async connectToAudioMotion() {
+                const btn = document.getElementById('motionAutoModeBtn');
+                const originalText = btn.textContent;
+                btn.textContent = '接続中...';
+                btn.disabled = true;
+                btn.style.background = '#ffc107';
+                
+                try {
+                    // リール動き検知自動モードフラグを設定
+                    this.isMotionAutoMode = true;
+                    
+                    // 先にカメラ開始（ユーザージェスチャー有効時）
+                    if (!this.stream) {
+                        await this.startCamera();
+                        this.updateStatus('カメラ開始完了');
+                        await this.sleep(1000); // カメラ安定待ち
+                    }
+                    
+                    // オーディオコンテキスト初期化
+                    await this.connectAudio();
+                    btn.textContent = '✓ 動き自動';
+                    btn.style.background = '#28a745';
+                    
+                    // UI非表示
+                    this.hideUIForMotionAutoMode();
+                    
+                    // 自動でランプ位置設定モードに入る
+                    this.enterSetupMode();
+                    this.updateStatus('動き検知自動モード - ランプ位置設定中...');
+                    
+                } catch (error) {
+                    this.isMotionAutoMode = false;
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                    btn.style.background = '#9C27B0';
+                    this.updateStatus('動き自動モード失敗: ' + error.message);
+                    console.error('動き自動モード失敗:', error);
+                    
+                    const alert = document.getElementById('vita-alert');
+                    alert.style.display = 'block';
+                    alert.style.background = 'rgba(220,53,69,0.9)';
+                    alert.textContent = '❌ 動き自動モード失敗';
+                    
+                    setTimeout(() => {
+                        alert.style.display = 'none';
+                    }, 3000);
+                }
+            }
+            
+            playBeep() {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.2);
+                } catch (e) {
+                    console.log('音声再生不可:', e);
+                }
+            }
+            
+            toggleDetection() {
+                this.isDetecting = !this.isDetecting;
+                const btn = document.getElementById('detectBtn');
+                
+                if (this.isDetecting) {
+                    btn.textContent = '検知停止';
+                    btn.style.background = '#dc3545';
+                    document.getElementById('detection-mode').textContent = 'オン';
+                    this.updateStatus('検知中...');
+                } else {
+                    btn.textContent = '検知開始';
+                    btn.style.background = '#007bff';
+                    document.getElementById('detection-mode').textContent = 'オフ';
+                    this.updateStatus('検知停止');
+                    this.lampLit = false;
+                }
+            }
+            
+            reset() {
+                this.isDetecting = false;
+                this.lampPosition = null;
+                this.lampLit = false;
+                this.baseline = null;
+                this.brightnessHistory = [];
+                
+                // ビタタイミングクリア
+                this.reelStartTime = null;
+                this.vitaIntervals.forEach(interval => clearTimeout(interval));
+                this.vitaIntervals = [];
+                
+                // ビタ回数カウンターリセット
+                this.vitaCount = 0;
+                this.vitaStopped = false;
+                
+                document.getElementById('lamp-position').textContent = '未設定';
+                document.getElementById('baseline').textContent = '-';
+                document.getElementById('detection-mode').textContent = 'オフ';
+                document.getElementById('next-vita').textContent = '-';
+                document.getElementById('vita-count').textContent = '0/10';
+                document.getElementById('detectBtn').disabled = true;
+                document.getElementById('setupBtn').disabled = false;
+                document.getElementById('setupBtn').style.background = '#007bff';
+                
+                this.updateStatus('リセット完了');
+            }
+            
+            loadSettings() {
+                try {
+                    // 最後に使用した機種を復元
+                    const lastMachine = localStorage.getItem('slotDetectorLastMachine');
+                    if (lastMachine) {
+                        this.currentMachine = lastMachine;
+                        document.getElementById('machine-select').value = lastMachine;
+                    }
+                    
+                    this.loadMachineSettings(this.currentMachine);
+                } catch (e) {
+                    console.log('設定読み込みエラー:', e);
+                }
+            }
+            
+            loadMachineSettings(machineType) {
+                try {
+                    const settings = localStorage.getItem(`slotDetectorSettings_${machineType}`);
+                    if (settings) {
+                        const data = JSON.parse(settings);
+                        
+                        // オフセット設定復元
+                        if (data.vitaOffset !== undefined) {
+                            this.vitaOffset = data.vitaOffset;
+                            document.getElementById('timing-offset').value = data.vitaOffset;
+                        }
+                        
+                        // 周期設定復元
+                        if (data.vitaCycle !== undefined) {
+                            this.vitaCycle = data.vitaCycle;
+                            document.getElementById('timing-cycle').value = data.vitaCycle;
+                        }
+                        
+                        // 検知閾値復元
+                        if (data.detectionThresholdOffset !== undefined) {
+                            this.detectionThresholdOffset = data.detectionThresholdOffset;
+                            document.getElementById('detection-threshold').value = data.detectionThresholdOffset;
+                        }
+                        
+                        // 検出範囲復元
+                        if (data.detectionRadius !== undefined) {
+                            this.detectionRadius = data.detectionRadius;
+                            document.getElementById('detection-radius').value = data.detectionRadius;
+                        }
+                        
+                        // ビタ回数制限復元
+                        if (data.maxVitaCount !== undefined) {
+                            this.maxVitaCount = data.maxVitaCount;
+                            document.getElementById('vita-limit-select').value = data.maxVitaCount;
+                        }
+                        
+                        // 動き検出設定復元
+                        if (data.avgFrameCount !== undefined) {
+                            this.avgFrameCount = data.avgFrameCount;
+                            document.getElementById('avg-frames-slider').value = data.avgFrameCount;
+                            document.getElementById('avg-frames-display').textContent = data.avgFrameCount;
+                        }
+                        if (data.startThreshold !== undefined) {
+                            this.startThreshold = data.startThreshold;
+                            document.getElementById('start-threshold-slider').value = data.startThreshold;
+                            document.getElementById('start-threshold-display').textContent = data.startThreshold;
+                        }
+                        if (data.stopThreshold !== undefined) {
+                            this.stopThreshold = data.stopThreshold;
+                            document.getElementById('stop-threshold-slider').value = data.stopThreshold;
+                            document.getElementById('stop-threshold-display').textContent = data.stopThreshold;
+                        }
+                        // 旧設定との互換性
+                        if (data.motionThreshold !== undefined && data.startThreshold === undefined) {
+                            this.startThreshold = data.motionThreshold;
+                            document.getElementById('start-threshold-slider').value = data.motionThreshold;
+                            document.getElementById('start-threshold-display').textContent = data.motionThreshold;
+                        }
+                        
+                        // カメラFPS設定（60fps固定なので復元不要）
+                        
+                        // ランプ位置復元
+                        if (data.lampPosition) {
+                            this.lampPosition = data.lampPosition;
+                            document.getElementById('lamp-position').textContent = 
+                                `(${data.lampPosition.x}, ${data.lampPosition.y})`;
+                            document.getElementById('detectBtn').disabled = false;
+                        }
+                        
+                        this.updateDisplays();
+                        console.log(`${machineType} 設定読み込み完了:`, data);
+                    } else {
+                        console.log(`${machineType} の設定が見つかりません`);
+                    }
+                } catch (e) {
+                    console.log(`${machineType} 設定読み込みエラー:`, e);
+                }
+            }
+            
+            saveCurrentMachineSettings() {
+                this.saveMachineSettings(this.currentMachine);
+            }
+            
+            saveMachineSettings(machineType) {
+                try {
+                    const settings = {
+                        vitaOffset: this.vitaOffset,
+                        vitaCycle: this.vitaCycle,
+                        detectionThresholdOffset: this.detectionThresholdOffset,
+                        detectionRadius: this.detectionRadius,
+                        maxVitaCount: this.maxVitaCount,
+                        avgFrameCount: this.avgFrameCount,
+                        startThreshold: this.startThreshold,
+                        stopThreshold: this.stopThreshold,
+                        lampPosition: this.lampPosition,
+                        savedAt: new Date().toISOString()
+                    };
+                    
+                    localStorage.setItem(`slotDetectorSettings_${machineType}`, JSON.stringify(settings));
+                    localStorage.setItem('slotDetectorLastMachine', machineType);
+                    
+                    // 視覚的フィードバック
+                    const status = document.getElementById('current-status');
+                    const originalText = status.textContent;
+                    status.textContent = `💾 ${this.getMachineDisplayName(machineType)} 設定保存完了`;
+                    status.style.color = '#4CAF50';
+                    
+                    setTimeout(() => {
+                        status.textContent = originalText;
+                        status.style.color = '';
+                    }, 2000);
+                    
+                    console.log(`${machineType} 設定保存完了:`, settings);
+                } catch (e) {
+                    console.log('設定保存エラー:', e);
+                }
+            }
+            
+            changeMachine(machineType) {
+                // 現在の設定を保存
+                this.saveCurrentMachineSettings();
+                
+                // 新しい機種に切り替え
+                this.currentMachine = machineType;
+                
+                // 新しい機種の設定を読み込み
+                this.loadMachineSettings(machineType);
+                
+                // 状態をリセット
+                this.reset();
+                
+                // 視覚的フィードバック
+                this.showMachineChangeAlert(machineType);
+            }
+            
+            getMachineDisplayName(machineType) {
+                const names = {
+                    'machine1': '機種1',
+                    'machine2': '機種2',
+                    'machine3': '機種3',
+                    'machine4': '機種4',
+                    'machine5': '機種5'
+                };
+                return names[machineType] || machineType;
+            }
+            
+            showMachineChangeAlert(machineType) {
+                const alert = document.createElement('div');
+                alert.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(0,100,200,0.95);
+                    color: white;
+                    padding: 15px 25px;
+                    border-radius: 10px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    z-index: 2000;
+                    animation: fadeInOut 2s ease-in-out;
+                `;
+                alert.textContent = `🎰 ${this.getMachineDisplayName(machineType)} に切替`;
+                
+                document.body.appendChild(alert);
+                
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.parentNode.removeChild(alert);
+                    }
+                }, 2000);
+            }
+            
+            // リール動き検出機能
+            toggleMotionTest() {
+                if (this.motionTestActive) {
+                    this.stopMotionTest();
+                } else {
+                    this.startMotionTest();
+                }
+            }
+            
+            startMotionTest() {
+                if (!this.stream) {
+                    alert('カメラを開始してください');
+                    return;
+                }
+                
+                this.motionTestActive = true;
+                this.frameHistory = []; // 履歴クリア
+                document.getElementById('motion-test-btn').textContent = '停止';
+                document.getElementById('motion-test-btn').style.background = '#dc3545';
+                
+                // 30fpsで動き検出テスト
+                this.motionTestInterval = setInterval(() => {
+                    this.detectReelMotion();
+                }, 33); // 約30fps
+                
+                console.log('リール動き検出テスト開始');
+            }
+            
+            stopMotionTest() {
+                this.motionTestActive = false;
+                if (this.motionTestInterval) {
+                    clearInterval(this.motionTestInterval);
+                    this.motionTestInterval = null;
+                }
+                
+                document.getElementById('motion-test-btn').textContent = 'テスト開始';
+                document.getElementById('motion-test-btn').style.background = '#444';
+                
+                console.log('リール動き検出テスト停止');
+            }
+            
+            clearMotionTest() {
+                this.frameHistory = [];
+                this.motionDetectionState = 'waiting'; // 状態リセット
+                this.stopFrameCount = 0; // 停止フレームカウンターリセット
+                document.getElementById('motion-intensity').textContent = '0';
+                console.log('リール動き検出データクリア');
+            }
+            
+            updateMotionSettings() {
+                this.avgFrameCount = parseInt(document.getElementById('avg-frames-slider').value);
+                this.startThreshold = parseInt(document.getElementById('start-threshold-slider').value);
+                this.stopThreshold = parseInt(document.getElementById('stop-threshold-slider').value);
+                
+                document.getElementById('avg-frames-display').textContent = this.avgFrameCount;
+                document.getElementById('start-threshold-display').textContent = this.startThreshold;
+                document.getElementById('stop-threshold-display').textContent = this.stopThreshold;
+                
+                // 設定保存
+                this.saveMachineSettings(this.currentMachine);
+                
+                console.log(`動き検出設定更新: 平均${this.avgFrameCount}フレーム, 始動${this.startThreshold}, 停止${this.stopThreshold}`);
+            }
+            
+            
+            detectReelMotion() {
+                if (!this.stream || !this.lampPosition) return;
+                
+                // 現在フレームを取得
+                this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                const currentFrameData = this.getDetectionAreaPixels();
+                
+                // フレーム履歴に追加
+                this.frameHistory.push(currentFrameData);
+                
+                // 最大5フレームに制限
+                if (this.frameHistory.length > 5) {
+                    this.frameHistory.shift();
+                }
+                
+                // 指定数のフレームがたまったら動き検出
+                if (this.frameHistory.length >= this.avgFrameCount) {
+                    const avgFrame = this.calculateAverageFrame(this.avgFrameCount);
+                    const motionIntensity = this.calculateMotionIntensity(currentFrameData, avgFrame);
+                    
+                    // リアルタイム表示更新
+                    document.getElementById('motion-intensity').textContent = motionIntensity.toFixed(1);
+                    
+                    // 状態に応じた判定
+                    if (this.motionDetectionState === 'waiting') {
+                        // 始動待ち状態：始動閾値を超えたら始動検知
+                        if (motionIntensity > this.startThreshold) {
+                            this.motionDetectionState = 'started';
+                            this.onReelMotionDetected(motionIntensity);
+                        }
+                    } else if (this.motionDetectionState === 'started') {
+                        // 始動済み状態：停止閾値を下回ったら連続フレームカウント
+                        if (motionIntensity < this.stopThreshold) {
+                            this.stopFrameCount++;
+                            if (this.stopFrameCount >= 10) {
+                                this.motionDetectionState = 'waiting';
+                                this.stopFrameCount = 0;
+                                console.log(`リール停止検知: 10フレーム連続で停止閾値未満`);
+                            }
+                        } else {
+                            this.stopFrameCount = 0; // 閾値を上回ったらカウンターリセット
+                        }
+                    }
+                }
+            }
+            
+            getDetectionAreaPixels() {
+                const imageData = this.ctx.getImageData(
+                    this.lampPosition.x - this.detectionRadius,
+                    this.lampPosition.y - this.detectionRadius,
+                    this.detectionRadius * 2,
+                    this.detectionRadius * 2
+                );
+                return imageData.data;
+            }
+            
+            calculateAverageFrame(frameCount) {
+                const recentFrames = this.frameHistory.slice(-frameCount);
+                const pixelCount = recentFrames[0].length;
+                const avgFrame = new Uint8ClampedArray(pixelCount);
+                
+                for (let i = 0; i < pixelCount; i++) {
+                    let sum = 0;
+                    for (let j = 0; j < recentFrames.length; j++) {
+                        sum += recentFrames[j][i];
+                    }
+                    avgFrame[i] = sum / recentFrames.length;
+                }
+                
+                return avgFrame;
+            }
+            
+            calculateMotionIntensity(currentFrame, avgFrame) {
+                let totalDiff = 0;
+                const pixelCount = currentFrame.length;
+                
+                for (let i = 0; i < pixelCount; i += 4) { // RGBAのため4バイトおき
+                    const currentGray = (currentFrame[i] + currentFrame[i+1] + currentFrame[i+2]) / 3;
+                    const avgGray = (avgFrame[i] + avgFrame[i+1] + avgFrame[i+2]) / 3;
+                    totalDiff += Math.abs(currentGray - avgGray);
+                }
+                
+                return totalDiff / (pixelCount / 4); // ピクセル数で平均化
+            }
+            
+            onReelMotionDetected(intensity) {
+                console.log(`リール動き検出! 強度: ${intensity.toFixed(1)}`);
+                
+                // リール動き検知自動モード時はビタタイミングで自動押下
+                if (this.isMotionAutoMode && this.isAudioConnected) {
+                    this.startVitaTiming();
+                    return; // 自動モード時はアラート表示をスキップ
+                }
+                
+                // 通常モード時は既存のアラート形式でポップアップ表示
+                const alert = document.getElementById('vita-alert');
+                alert.textContent = `🎰 リール動き検出! 強度: ${intensity.toFixed(1)}`;
+                alert.style.background = 'rgba(255,165,0,0.9)';
+                alert.style.display = 'block';
+                
+                // 2秒後に非表示
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 2000);
+            }
+            
+            updateStatus(message) {
+                document.getElementById('current-status').textContent = message;
+            }
+            
+        }
+        
+        // PWA対応
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {
+                    console.log('ServiceWorker登録失敗');
+                });
+            });
+        }
+        
+        // 偽装画面（時計）の制御クラス
+        class DisguiseClockController {
+            constructor() {
+                this.updateInterval = null;
+            }
+            
+            start() {
+                this.updateClock();
+                this.createFloatingElements();
+                this.updateInterval = setInterval(() => this.updateClock(), 1000);
+                
+                // 調整値の初期表示
+                app.updateClockOffsetDisplay();
+                app.updateClockCycleDisplay();
+                app.updateClockVitaLimitDisplay();
+                
+                // ロック状態初期化（ロック状態で開始）
+                app.clockLocked = true;
+                document.getElementById('disguise-lock').textContent = '🔒';
+                document.querySelector('.lock-icon').classList.add('locked');
+            }
+            
+            stop() {
+                if (this.updateInterval) {
+                    clearInterval(this.updateInterval);
+                    this.updateInterval = null;
+                }
+            }
+            
+            updateClock() {
+                const now = new Date();
+                
+                // Update time
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                
+                document.getElementById('disguise-hours').textContent = hours;
+                document.getElementById('disguise-minutes').textContent = minutes;
+                document.getElementById('disguise-seconds').textContent = seconds;
+                
+                // Update date
+                const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+                const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                              'July', 'August', 'September', 'October', 'November', 'December'];
+                
+                const dayOfWeek = days[now.getDay()];
+                const month = months[now.getMonth()];
+                const day = now.getDate();
+                const year = now.getFullYear();
+                
+                document.getElementById('disguise-dayOfWeek').textContent = dayOfWeek;
+                document.getElementById('disguise-date').textContent = `${month} ${day}, ${year}`;
+                
+                // Update progress bar (represents progress through the day)
+                const totalSecondsInDay = 24 * 60 * 60;
+                const secondsPassed = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
+                const progressPercentage = (secondsPassed / totalSecondsInDay) * 100;
+                document.getElementById('disguise-progressFill').style.width = progressPercentage + '%';
+            }
+            
+            createFloatingElements() {
+                const container = document.getElementById('floatingElements');
+                const numberOfCircles = 5;
+                
+                // 既存の要素をクリア
+                container.innerHTML = '';
+                
+                for (let i = 0; i < numberOfCircles; i++) {
+                    const circle = document.createElement('div');
+                    circle.className = 'floating-circle';
+                    
+                    const size = Math.random() * 200 + 100;
+                    circle.style.width = size + 'px';
+                    circle.style.height = size + 'px';
+                    circle.style.left = Math.random() * 100 + '%';
+                    circle.style.animationDelay = Math.random() * 20 + 's';
+                    circle.style.animationDuration = (Math.random() * 10 + 20) + 's';
+                    
+                    container.appendChild(circle);
+                }
+            }
+        }
+
+        // アプリ初期化
+        const app = new RealtimeLampDetector();
+        const disguiseClock = new DisguiseClockController();
+    </script>
+</body>
+</html>
